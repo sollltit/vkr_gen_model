@@ -1,3 +1,7 @@
 .venv
 camel_physic_ds/
+<<<<<<< HEAD
 qwen_model/
+=======
+qwen_model
+>>>>>>> b88526c (]])
