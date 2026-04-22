@@ -121,8 +121,10 @@ def format_math_expressions(text):
     
     return formatted_text # функция возвращает форматированный текст
 
+SYSTEM_PROMPT = 'Ты — интеллектуальный помощник, специализирующийся на технических науках. Отвечай ТОЛЬКО на русском языке, максимально точно и с объяснением. Для генерации специальных символов и формул используй ТОЛЬКО формат LaTeX. Прописывай названия уравнений, формул и законов, если это используется в решении.'
 
-def build_conversation_context(messages, max_context_messages=10):
+
+def build_conversation_context(messages, max_context_messages=10, system_prompt = SYSTEM_PROMPT):
 
     """
     Функция для построения контекста
@@ -132,10 +134,7 @@ def build_conversation_context(messages, max_context_messages=10):
     
     # берутся последние N сообщений 
     recent_messages = messages[-max_context_messages:] if len(messages) > max_context_messages else messages
-    
-    # системныйй промт
-    system_prompt = "Ты - технический ассистент. Отвечай кратко и по делу.\n\n"
-    
+
     # сбор контекста
     conversation = system_prompt
     for message in recent_messages:

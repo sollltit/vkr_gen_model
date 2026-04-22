@@ -2,65 +2,59 @@ import torch
 from peft import PeftModel, PeftConfig
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import streamlit as st
+import re
+from IPython.display import Markdown
 
-MODEL_NAME = "sollltit/qwen_1.5B_FT"
+model_path = './qwen_model'
+lora_path = 'qwen2.5_fine-tune/checkpoint-210'
 
 
 @st.cache_resource
-def load_peft_model(model_name = MODEL_NAME):
-    """Загружаем PEFT модель"""
-    print("🔄 Загружаем PEFT модель sollltit/qwen_1.5B_FT...")
-    
-
+def load_peft_model(model = model_path, lora = lora_path):
+    """Загружаем модель"""
+    print("🔄 Загружаем модель...")
     try:
-        # Загружаем конфиг PEFT
-        config = PeftConfig.from_pretrained(model_name)
-        
-        base_model = AutoModelForCausalLM.from_pretrained(
-            config.base_model_name_or_path,
-            dtype=torch.float16,
-            device_map="cpu",
-            trust_remote_code=True
-        )
-        
-        # Загружаем PEFT адаптеры
-        model = PeftModel.from_pretrained(base_model, model_name)
-        
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
-        
-        print("✅ PEFT модель загружена успешно")
+        # Загружаем конфиг 
+        model = AutoModelForCausalLM.from_pretrained('./qwen_model', dtype = torch.float16, device_map = 'auto')
+        model = PeftModel.from_pretrained(model, lora)
+        model.eval()
+        tokenizer = AutoTokenizer.from_pretrained('./qwen_model')
         return model, tokenizer
         
     except Exception as e:
-        print(f"❌ Ошибка при загрузке PEFT модели: {e}")
+        print(f"❌ Ошибка при загрузке модели: {e}")
         raise e
+
+def render_latex(text):
+    # убираем лишние служебные токены (если есть)
+    text = text.replace("<|assistant|>", "").strip()
+
+    # заменяем \( \) → $
+    text = re.sub(r"\\\((.*?)\\\)", r"$\1$", text)
+
+    # заменяем \[ \] → $$
+    text = re.sub(r"\\\[(.*?)\\\]", r"$$\1$$", text)
+
+    return text
 
 
 def generate_response_peft(prompt):
-    """Генерируем ответ через PEFT модель"""
+    """Генерируем ответ через модель"""
     model, tokenizer = load_peft_model()
     
     
     inputs = tokenizer(prompt, return_tensors="pt", padding = True).to(model.device)
     
-    # input_ids = inputs.input_ids.to(model.device)
-    # attention_mask = inputs.attention_mask.to(model.device)
-
     with torch.no_grad():
-        outputs = model.generate(
+        output = model.generate(
             **inputs,
-            max_new_tokens = 350,
+            max_new_tokens = 2048,
             max_length = 2048,
-            temperature=0.7,
-            do_sample=True,
-            pad_token_id=tokenizer.eos_token_id
+            temperature=0.7
         )
+        generated_tokens = output[0][inputs["input_ids"].shape[-1]:]
+    formatted = render_latex(tokenizer.decode(generated_tokens, skip_special_tokens=True))
+
+    return ((formatted))
+
     
-    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    # Убираем промпт из ответа
-    response = response[len(prompt):].strip()
-    
-    if "<|end|>" in response:
-        response = response.split("<|end|>")[0]
-    
-    return response.strip()
