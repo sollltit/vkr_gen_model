@@ -6,44 +6,32 @@ from dotenv import load_dotenv
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 import re
-from transformers import BitsAndBytesConfig
-from functools import lru_cache
 
 load_dotenv()
 
 model_path = os.getenv("MODEL_PATH", "./qwen_model")
-lora_path = os.getenv("LORA_PATH", './qwen2.5_fine-tune/checkpoint-210')
+lora_path = os.getenv("LORA_PATH")
 tavily_api_key = os.getenv("TAVILY_API_KEY")
 sys_prompt = os.getenv("SYSTEM_PROMPT")
 
 # =========================
 # 🔹 Загрузка модели
 # =========================
-
-
-@lru_cache(maxsize=1)
+@st.cache_resource
 def load_peft_model(model_path=model_path, lora_path=lora_path):
     """Загрузка модели + LoRA"""
     print("🔄 Загружаем модель...")
 
     try:
-        bnb_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.float16,
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_quant_type="nf4",
-            llm_int8_enable_fp32_cpu_offload=True
-
-        )
-
         model = AutoModelForCausalLM.from_pretrained(
             model_path,
-            quantization_config=bnb_config,
-            device_map="auto",
-            offload_folder="./offload",
+            torch_dtype=torch.float16,
+            device_map="auto"
         )
 
-        model = PeftModel.from_pretrained(model, lora_path)
+        if lora_path and lora_path != "None":
+            print("🔗 Подключаем LoRA...")
+            model = PeftModel.from_pretrained(model, lora_path)
 
         model.eval()
 
@@ -104,7 +92,7 @@ def generate_response_peft(prompt):
     # простая эвристика — когда нужен поиск
     search_keywords = [
         "кто", "что", "новости", "последние",
-        "современные", "актуальные", "объясни", 'найди', 'недавно', 'характеристики', 'совместимость'
+        "современные", "актуальные", "объясни"
     ]
 
     use_search = any(word in prompt.lower() for word in search_keywords)
@@ -129,13 +117,9 @@ def generate_response_peft(prompt):
         return_tensors="pt",
         truncation=True,
         max_length=4096
-    )
+    ).to(model.device)
 
-    input_device = next(model.parameters()).device
-    inputs = {k: v.to(input_device) for k, v in inputs.items()}
-    torch.cuda.empty_cache()
     with torch.no_grad():
-        # torch.cuda.empty_cache()
         output = model.generate(
             **inputs,
             max_new_tokens=1024,

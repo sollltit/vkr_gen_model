@@ -1,8 +1,8 @@
 import streamlit as st
 import requests
 from datetime import datetime
-from functions_for_interface import safe_load_chat_history, create_new_chat, save_chat_history, get_chat_title, delete_chat, build_conversation_context, format_math_expressions
-from functions_for_model import load_peft_model, generate_response_peft
+from app.back.functions_for_interface import safe_load_chat_history, create_new_chat, save_chat_history, get_chat_title, delete_chat, build_conversation_context, format_math_expressions
+from app.back.model_functions import generate_response_peft
 
 SYSTEM_PROMPT = 'Ты — интеллектуальный помощник, специализирующийся на технических науках. Отвечай ТОЛЬКО на русском языке, максимально точно и с объяснением. Для генерации специальных символов и формул используй ТОЛЬКО формат LaTeX. Прописывай названия уравнений, формул и законов, если это используется в решении.'
 
