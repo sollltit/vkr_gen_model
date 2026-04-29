@@ -7,6 +7,7 @@ import torch
 from dotenv import load_dotenv
 from back.model_functions import load_peft_model, format_math_expressions
 import json
+from datetime import datetime
 
 load_dotenv()
 
@@ -18,6 +19,7 @@ app = FastAPI()
 model_path = os.getenv("MODEL_PATH")  # путь к модели
 lora_path = os.getenv("LORA_PATH")  # путь к модели
 SYSTEM_PROMPT = os.getenv("SYSTEM_PROMPT")
+current_date = datetime.now().strftime("%d.%m.%Y") # ТЕКУЩАЯ ДАТА
 
 
 
@@ -32,25 +34,41 @@ model, tokenizer = load_peft_model()
 # =========================
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 
+
 def search_web(query):
     url = "https://api.tavily.com/search"
 
+    current_date = datetime.now().strftime("%d %B %Y")
+
     response = requests.post(url, json={
         "api_key": TAVILY_API_KEY,
-        "query": query,
-        "search_depth": "basic",
+        "query": query,   # БЕЗ даты
+        "search_depth": "advanced",
         "max_results": 5
     })
 
     print(f"[SEARCH_WEB] query: {query}")
 
     data = response.json()
+    print("[SEARCH_WEB] raw response:", data)
 
     results = []
-    for r in data.get("results", []):
-        results.append(r["content"])
 
-    return "\n".join(results)
+    for r in data.get("results", []):
+        title = r.get("title", "")
+        content = r.get("content", "")
+        url_src = r.get("url", "")
+
+        results.append(
+            f"Источник: {title}\n"
+            f"Содержание: {content}\n"
+            f"Ссылка: {url_src}\n"
+        )
+
+    if not results:
+        return f"На {current_date} поиск не дал результатов по запросу: {query}"
+
+    return f"Актуальные данные на {current_date}:\n\n" + "\n".join(results)
 
 # =========================
 # 🔹 Генерация
@@ -136,7 +154,7 @@ def pipeline(chat_history):
         context = search_web(last_user_msg)
 
     messages = [
-        {"role": "system", "content": SYSTEM_PROMPT}
+        {"role": "system", "content": f"{SYSTEM_PROMPT}. Учитывай актуальную информацию на текущий момент: {current_date}"}
     ]
 
     if context:
@@ -168,3 +186,6 @@ async def chat(req: Request):
     messages = data.get("messages", [])
     answer = pipeline(messages)
     return {"response": answer}
+
+
+print(search_web("NVIDIA GeForce RTX 5000 series specs"))
