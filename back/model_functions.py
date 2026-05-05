@@ -73,7 +73,7 @@ def search_web(query):
                 "api_key": tavily_api_key,
                 "query": query,
                 "search_depth": "basic",
-                "max_results": 3
+                "max_results": 4
             },
             timeout=20
         )
@@ -104,7 +104,7 @@ def generate_response_peft(prompt):
     # простая эвристика — когда нужен поиск
     search_keywords = [
         "кто", "что", "новости", "последние",
-        "современные", "актуальные", "объясни", 'найди', 'недавно', 'характеристики', 'совместимость'
+        "современные", "актуальные", 'недавно', 'характеристики', 'совместимость'
     ]
 
     use_search = any(word in prompt.lower() for word in search_keywords)
@@ -139,9 +139,9 @@ def generate_response_peft(prompt):
         output = model.generate(
             **inputs,
             max_new_tokens=1024,
-            temperature=0.7,
+            temperature=0.55,
             do_sample=True,
-            top_p=0.9
+            top_p=0.95
         )
 
     generated_tokens = output[0][inputs["input_ids"].shape[-1]:]
@@ -152,39 +152,31 @@ def generate_response_peft(prompt):
     )
 
     # если у тебя есть render_latex
-    formatted = format_math_expressions(response)
+    # formatted = format_math_expressions(response)
 
-    return formatted
+    return response
     
-def format_math_expressions(text):
 
+def format_math_expressions(text: str) -> str:
     """
-    Функция для обработки математических формул, которые генерирует модель,
-    чтобы те понятно выводилиссь пользователю. Формулы обрабатываются с помощью регулярных выражений
+    Приводит LaTeX-формулы к корректному виду для отображения в Streamlit/Markdown.
+    НЕ ломает LaTeX, а наоборот — оборачивает его в $...$
     """
 
-    replacements = {
-        r'\\frac\{([^}]+)\}\{([^}]+)\}': r'\1/\2',
-        r'\\sqrt\{([^}]+)\}': r'√(\1)',
-        r'\\pi': 'π',
-        r'\\infty': '∞',
-        r'\\alpha': 'α',
-        r'\\beta': 'β',
-        r'\\gamma': 'γ',
-        r'\\theta': 'θ',
-        r'\\lambda': 'λ',
-        r'\\times': '×',
-        r'\\cdot': '·',
-        r'\\approx': '≈',
-        r'\\neq': '≠',
-        r'\\leq': '≤',
-        r'\\geq': '≥',
-        r'\^\{([^}]+)\}': r'^\1',
-        r'_\{([^}]+)\}': r'_\1',
-    }
+    # 1. Убираем лишние escape-символы типа \\ → \
+    text = text.replace("\\\\", "\\")
+
+    # 2. Формулы в квадратных скобках [ ... ] → $$ ... $$
+    text = re.sub(r'\[\s*(.*?)\s*\]', r'$$\1$$', text, flags=re.DOTALL)
+
+    # 3. Inline формулы \( ... \) → $ ... $
+    text = re.sub(r'\\\((.*?)\\\)', r'$\1$', text)
+
+    # 4. Уже существующие $$ не трогаем, но чистим лишние пробелы
+    text = re.sub(r'\$\$\s*(.*?)\s*\$\$', r'$$\1$$', text, flags=re.DOTALL)
+
+    # 5. Чистим дубли пробелов
+    text = re.sub(r'\n{3,}', '\n\n', text)
+
+    return text
     
-    formatted_text = text
-    for pattern, replacement in replacements.items():
-        formatted_text = re.sub(pattern, replacement, formatted_text)
-    
-    return formatted_text # функция возвращает форматированный текст
