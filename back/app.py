@@ -43,8 +43,8 @@ def search_web(query):
     response = requests.post(url, json={
         "api_key": TAVILY_API_KEY,
         "query": query,   # БЕЗ даты
-        "search_depth": "advanced",
-        "max_results": 5
+        "search_depth": "basic",
+        "max_results": 3
     })
 
     print(f"[SEARCH_WEB] query: {query}")
@@ -64,6 +64,7 @@ def search_web(query):
             f"Содержание: {content}\n"
             f"Ссылка: {url_src}\n"
         )
+        print(results)
 
     if not results:
         return f"На {current_date} поиск не дал результатов по запросу: {query}"
@@ -93,7 +94,6 @@ def generate_answer(messages):
             "content": content
         })
 
-    print("=== DEBUG ===")
     print(json.dumps(safe_messages, ensure_ascii=False, indent=2))
 
     text = tokenizer.apply_chat_template(
@@ -107,7 +107,7 @@ def generate_answer(messages):
         text,
         return_tensors="pt",
         truncation=True,
-        max_length=4096
+        max_length=6096
     )
 
     input_device = next(model.parameters()).device
@@ -115,7 +115,7 @@ def generate_answer(messages):
     outputs = model.generate(
         **inputs,
         max_new_tokens=2048,
-        temperature=0.7,
+        temperature=0.5,
         do_sample=True
     )
 
@@ -145,17 +145,19 @@ def pipeline(chat_history):
     last_user_msg = normalized_history[-1]["content"]
 
     use_search = any(word in last_user_msg.lower() for word in [
-        "кто", "что", "новости", "последние", "объясни", "как работает", 'новые', 
+        "кто", "новости", "последние", "объясни", "как работает", 'новые', 
         'найди', 'недавно'
     ])
 
     context = ""
     if use_search:
+        print('USE SEARCH')
         context = search_web(last_user_msg)
-
+    else: print('NOT USE SEARCH')
     messages = [
         {"role": "system", "content": f"{SYSTEM_PROMPT}. Учитывай актуальную информацию на текущий момент: {current_date}"}
     ]
+    
 
     if context:
         messages.append({
