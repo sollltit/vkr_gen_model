@@ -8,10 +8,21 @@ from dotenv import load_dotenv
 from back.model_functions import load_peft_model, format_math_expressions
 import json
 from datetime import datetime
+from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
 app = FastAPI()
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # =========================
 # 🔹 Загрузка модели
