@@ -6,7 +6,7 @@ API_URL = "http://localhost:8000/chat"
 
 st.set_page_config(page_title="тест", layout="centered")
 
-st.title("💬 Chat")
+st.title("Chat 💬 ")
 
 
 
@@ -46,7 +46,7 @@ if user_input:
     with st.chat_message("user"):
         st.markdown(user_input)
 
-    # запрос к API (модель НЕ загружается здесь)
+    # запрос к API 
     with st.chat_message("assistant"):
         with st.spinner("Генерация..."):
             try:
