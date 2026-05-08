@@ -8,15 +8,24 @@ import { useChatStore } from "@/store/chatStore";
 
 import Message from "./Message";
 import ChatInput from "./ChatInput";
+import Sidebar from "./Sidebar";
 
 export default function Chat() {
-    const { messages, addMessage } = useChatStore();
+    const {
+        chats,
+        currentChatId,
+        addMessage
+    } = useChatStore();
+
+    const currentChat = chats.find(
+        (chat) => chat.id === currentChatId
+    );
 
     const [loading, setLoading] = useState(false);
 
     async function handleSend(text: string) {
         const userMessage = {
-            role: "user",
+            role: "user" as const,
             content: text
         };
 
@@ -26,21 +35,23 @@ export default function Chat() {
 
         try {
             const updatedMessages = [
-                ...messages,
+                ...(currentChat?.messages || []),
                 userMessage
             ];
 
-            const response = await sendMessage(updatedMessages);
+            const response =
+                await sendMessage(updatedMessages);
 
             addMessage({
                 role: "assistant",
                 content: response
             });
 
-        } catch (error) {
+        } catch {
             addMessage({
                 role: "assistant",
-                content: "Ошибка подключения к API"
+                content:
+                    "Ошибка подключения к API"
             });
 
         } finally {
@@ -49,21 +60,38 @@ export default function Chat() {
     }
 
     return (
-        <div className="flex flex-col h-screen bg-black">
-            <div className="flex-1 overflow-y-auto p-4">
-                {messages.map((msg, index) => (
-                    <Message
-                        key={index}
-                        role={msg.role}
-                        content={msg.content}
-                    />
-                ))}
-            </div>
+        <div className="flex h-screen bg-black text-white">
+            
+            <Sidebar />
 
-            <ChatInput
-                onSend={handleSend}
-                loading={loading}
-            />
+            <div className="flex-1 flex flex-col">
+                
+                <div
+                    className="
+                        flex-1
+                        overflow-y-auto
+                        px-6
+                        py-10
+                    "
+                >
+                    <div className="max-w-4xl mx-auto">
+                        {currentChat?.messages.map(
+                            (msg, index) => (
+                                <Message
+                                    key={index}
+                                    role={msg.role}
+                                    content={msg.content}
+                                />
+                            )
+                        )}
+                    </div>
+                </div>
+
+                <ChatInput
+                    onSend={handleSend}
+                    loading={loading}
+                />
+            </div>
         </div>
     );
 }

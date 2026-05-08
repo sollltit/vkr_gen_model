@@ -8,33 +8,48 @@ interface Props {
     content: string;
 }
 
-export default function Message({ role, content }: Props) {
+export default function Message({
+    role,
+    content
+}: Props) {
+
     const isUser = role === "user";
 
     return (
         <div
-            className={`w-full flex ${
-                isUser ? "justify-end" : "justify-start"
-            }`}
+            className={`
+                flex
+                w-full
+                mb-8
+                ${
+                    isUser
+                        ? "justify-end"
+                        : "justify-start"
+                }
+            `}
         >
             <div
                 className={`
                     max-w-3xl
-                    rounded-2xl
-                    px-4
-                    py-3
-                    my-2
+                    rounded-3xl
+                    px-6
+                    py-5
+                    text-[16px]
+                    leading-8
+                    shadow-lg
                     whitespace-pre-wrap
                     ${
                         isUser
-                            ? "bg-blue-500 text-white"
-                            : "bg-zinc-800 text-zinc-100"
+                            ? "bg-blue-600 text-white"
+                            : "bg-[#1f1f1f] text-white border border-zinc-800"
                     }
                 `}
             >
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {content}
-                </ReactMarkdown>
+                <div className="text-white">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {content}
+                    </ReactMarkdown>
+                </div>
             </div>
         </div>
     );

@@ -9,10 +9,27 @@ from back.model_functions import load_peft_model, format_math_expressions
 import json
 from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
+from back.database import engine, SessionLocal
+from back.models import Base, Chat, Message
+from fastapi import Depends
+from sqlalchemy.orm import Session
+
+Base.metadata.create_all(bind=engine)
 
 load_dotenv()
 
 app = FastAPI()
+
+
+# - - - - - - - - - - - - - - - - - - - - - 
+def get_db():
+    db = SessionLocal()
+
+    try:
+        yield db
+
+    finally:
+        db.close()
 
 
 app.add_middleware(
@@ -194,11 +211,54 @@ class ChatRequest(BaseModel):
 
 
 @app.post("/chat")
-async def chat(req: Request):
+async def chat(
+    req: Request,
+    db: Session = Depends(get_db)
+):
+
     data = await req.json()
+
     messages = data.get("messages", [])
+
+    # Генерация ответа
     answer = pipeline(messages)
-    return {"response": answer}
+
+    # Создаём чат если его нет
+    new_chat = Chat(
+        title="Новый чат"
+    )
+
+    db.add(new_chat)
+
+    db.commit()
+
+    db.refresh(new_chat)
+
+    # Сохраняем user messages
+    for msg in messages:
+
+        db_msg = Message(
+            chat_id=new_chat.id,
+            role=msg["role"],
+            content=msg["content"]
+        )
+
+        db.add(db_msg)
+
+    # Сохраняем ответ модели
+    assistant_msg = Message(
+        chat_id=new_chat.id,
+        role="assistant",
+        content=answer
+    )
+
+    db.add(assistant_msg)
+
+    db.commit()
+
+    return {
+        "response": answer
+    }
 
 
 # print(search_web("NVIDIA GeForce RTX 5000 series specs"))
