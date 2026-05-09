@@ -1,19 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import {
+    useState,
+    KeyboardEvent
+} from "react";
+
 
 interface Props {
-    onSend: (text: string) => void;
+
+    onSend: (
+        text: string
+    ) => void;
+
     loading: boolean;
 }
+
 
 export default function ChatInput({
     onSend,
     loading
 }: Props) {
+
     const [text, setText] = useState("");
 
+
+    // =========================
+    // SEND MESSAGE
+    // =========================
     function handleSend() {
+
         if (!text.trim()) return;
 
         onSend(text);
@@ -21,62 +36,105 @@ export default function ChatInput({
         setText("");
     }
 
+
+    // =========================
+    // ENTER
+    // =========================
+    function handleKeyDown(
+        e: KeyboardEvent<HTMLTextAreaElement>
+    ) {
+
+        if (
+            e.key === "Enter" &&
+            !e.shiftKey
+        ) {
+
+            e.preventDefault();
+
+            handleSend();
+        }
+    }
+
+
     return (
-        <div className="w-full px-6 pb-6">
+
+        <div
+            className="
+                border-t
+                border-zinc-800
+                p-4
+                bg-[#0a0a0a]
+            "
+        >
+
             <div
                 className="
                     max-w-4xl
                     mx-auto
-                    bg-zinc-900
-                    border
-                    border-zinc-800
-                    rounded-3xl
-                    p-4
+                    flex
+                    gap-3
+                    items-end
                 "
             >
+
+                {/* INPUT */}
                 <textarea
                     value={text}
+
                     onChange={(e) =>
                         setText(e.target.value)
                     }
-                    placeholder="Напишите сообщение..."
-                    rows={3}
-                    className="
-                        w-full
-                        bg-transparent
-                        outline-none
-                        resize-none
-                        text-white
-                    "
-                    onKeyDown={(e) => {
-                        if (
-                            e.key === "Enter" &&
-                            !e.shiftKey
-                        ) {
-                            e.preventDefault();
 
-                            handleSend();
-                        }
-                    }}
+                    onKeyDown={handleKeyDown}
+
+                    placeholder="Напишите сообщение..."
+
+                    rows={1}
+
+                    className="
+                        flex-1
+                        resize-none
+                        rounded-2xl
+                        bg-zinc-900
+                        text-white
+                        px-5
+                        py-4
+                        outline-none
+                        border
+                        border-zinc-800
+                        focus:border-zinc-700
+                        min-h-[60px]
+                        max-h-[200px]
+                    "
                 />
 
-                <div className="flex justify-end mt-3">
-                    <button
-                        onClick={handleSend}
-                        disabled={loading}
-                        className="
-                            bg-blue-600
-                            hover:bg-blue-500
-                            transition
-                            px-5
-                            py-2
-                            rounded-xl
-                        "
-                    >
-                        {loading ? "..." : "Send"}
-                    </button>
-                </div>
+
+                {/* BUTTON */}
+                <button
+                    onClick={handleSend}
+
+                    disabled={loading}
+
+                    className="
+                        h-[60px]
+                        px-6
+                        rounded-2xl
+                        bg-blue-600
+                        hover:bg-blue-500
+                        transition
+                        text-white
+                        disabled:opacity-50
+                    "
+                >
+
+                    {loading
+                        ? "..."
+                        : "Отправить"}
+
+                </button>
+
             </div>
+
         </div>
     );
 }

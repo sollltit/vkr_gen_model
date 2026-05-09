@@ -1,103 +1,51 @@
 import { create } from "zustand";
 
-import { persist } from "zustand/middleware";
-
-import { v4 as uuidv4 } from "uuid";
-
-export interface Message {
-    role: "user" | "assistant";
-    content: string;
-}
 
 export interface Chat {
-    id: string;
+
+    id: number;
+
     title: string;
-    messages: Message[];
 }
 
-interface ChatState {
+
+interface ChatStore {
 
     chats: Chat[];
 
-    currentChatId: string;
+    currentChatId: number | null;
 
-    createChat: () => void;
+    setChats: (
+        chats: Chat[]
+    ) => void;
 
-    setCurrentChat: (id: string) => void;
-
-    addMessage: (message: Message) => void;
+    setCurrentChat: (
+        id: number
+    ) => void;
 }
 
-const initialChat = {
-    id: uuidv4(),
-    title: "Новый чат",
-    messages: []
-};
 
-export const useChatStore = create<ChatState>()(
+export const useChatStore =
+    create<ChatStore>((set) => ({
 
-    persist(
+        chats: [],
 
-        (set, get) => ({
+        currentChatId: null,
 
-            chats: [initialChat],
 
-            currentChatId: initialChat.id,
+        setChats: (chats) =>
 
-            createChat: () => {
-
-                const newChat = {
-                    id: uuidv4(),
-                    title: "Новый чат",
-                    messages: []
-                };
-
-                set((state) => ({
-                    chats: [newChat, ...state.chats],
-                    currentChatId: newChat.id
-                }));
-            },
-
-            setCurrentChat: (id) => {
-                set(() => ({
-                    currentChatId: id
-                }));
-            },
-
-            addMessage: (message) => {
-
-                const {
-                    chats,
-                    currentChatId
-                } = get();
-
-                const updatedChats = chats.map((chat) => {
-
-                    if (chat.id === currentChatId) {
-
-                        return {
-                            ...chat,
-                            messages: [
-                                ...chat.messages,
-                                message
-                            ]
-                        };
-                    }
-
-                    return chat;
-                });
-
-                set(() => ({
-                    chats: updatedChats
-                }));
-            }
-
+        set({
+            chats: Array.isArray(chats)
+                ? chats
+                : []
         }),
 
-        {
-            name: "ai-chat-storage"
-        }
 
-    )
+        setCurrentChat: (id) =>
 
-);
+            set({
+                currentChatId: id
+            })
+
+    }));
