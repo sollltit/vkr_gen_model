@@ -18,9 +18,10 @@ interface MessageStore {
 
     messages: Message[];
 
-    setMessages: (
-        messages: Message[]
-    ) => void;
+    // setMessages теперь умеет:
+    // 1. принимать массив
+    // 2. принимать callback(prev => ...)
+    setMessages: any;
 
     addMessage: (
         message: Message
@@ -36,17 +37,39 @@ interface MessageStore {
 export const useMessageStore =
     create<MessageStore>((set) => ({
 
+        // =========================
+        // STATE
+        // =========================
         messages: [],
 
 
         // =========================
         // SET MESSAGES
         // =========================
-        setMessages: (messages) =>
+        setMessages: (messages: any) => {
 
-            set({
-                messages
-            }),
+            // Если передали функцию:
+            // setMessages(prev => ...)
+            if (typeof messages === "function") {
+
+                set((state) => ({
+
+                    messages: messages(
+                        state.messages
+                    )
+                }));
+
+            }
+
+            // Если передали массив:
+            // setMessages([...])
+            else {
+
+                set({
+                    messages
+                });
+            }
+        },
 
 
         // =========================
@@ -64,12 +87,11 @@ export const useMessageStore =
 
 
         // =========================
-        // CLEAR
+        // CLEAR MESSAGES
         // =========================
         clearMessages: () =>
 
             set({
                 messages: []
             })
-
     }));

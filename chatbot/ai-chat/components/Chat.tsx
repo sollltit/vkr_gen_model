@@ -1,10 +1,6 @@
 "use client";
 
-import {
-    useEffect,
-    useRef,
-    useState
-} from "react";
+import { useEffect, useRef, useState } from "react";
 
 import MessageBubble from "./MessageBubble";
 
@@ -21,26 +17,38 @@ import {
 
 export default function Chat() {
 
+    // =========================
+    // CHAT STORE
+    // =========================
+    const currentChatId = useChatStore(
+        (state) => state.currentChatId
+    );
+
+
+    // =========================
+    // MESSAGE STORE
+    // =========================
     const {
         messages,
         setMessages,
         addMessage
     } = useMessageStore();
 
-    const {
-        currentChatId
-    } = useChatStore();
 
+    // =========================
+    // LOADING
+    // =========================
     const [loading, setLoading] =
         useState(false);
-
-    const bottomRef =
-        useRef<HTMLDivElement>(null);
 
 
     // =========================
     // AUTO SCROLL
     // =========================
+    const bottomRef =
+        useRef<HTMLDivElement>(null);
+
+
     useEffect(() => {
 
         bottomRef.current?.scrollIntoView({
@@ -51,13 +59,18 @@ export default function Chat() {
 
 
     // =========================
-    // LOAD MESSAGES
+    // ЗАГРУЗКА СООБЩЕНИЙ ЧАТА
     // =========================
     useEffect(() => {
 
         async function loadMessages() {
 
-            if (!currentChatId) return;
+            if (!currentChatId) {
+
+                setMessages([]);
+
+                return;
+            }
 
             try {
 
@@ -69,17 +82,21 @@ export default function Chat() {
 
                 const data = await response.json();
 
+                console.log(
+                    "MESSAGES:",
+                    data
+                );
+
                 setMessages(
-
-                    Array.isArray(data.messages)
-                        ? data.messages
-                        : []
-
+                    data.messages || []
                 );
 
             } catch (error) {
 
-                console.error(error);
+                console.error(
+                    "Ошибка загрузки сообщений",
+                    error
+                );
             }
         }
 
@@ -97,6 +114,12 @@ export default function Chat() {
 
         if (!currentChatId) return;
 
+        if (!text.trim()) return;
+
+
+        // =========================
+        // USER MESSAGE
+        // =========================
         const userMessage = {
 
             id: Date.now(),
@@ -106,16 +129,39 @@ export default function Chat() {
             content: text
         };
 
-        // Добавляем user message
+
+        // Сразу показываем сообщение
         addMessage(userMessage);
+
+
+        // =========================
+        // ВРЕМЕННОЕ AI MESSAGE
+        // =========================
+        const assistantId =
+            Date.now() + 1;
+
+
+        addMessage({
+
+            id: assistantId,
+
+            role: "assistant",
+
+            content: ""
+        });
+
 
         setLoading(true);
 
+
         try {
 
+            // =========================
+            // STREAM REQUEST
+            // =========================
             const response = await fetch(
 
-                "http://127.0.0.1:8000/chat",
+                "http://127.0.0.1:8000/chat_stream",
 
                 {
                     method: "POST",
@@ -137,22 +183,76 @@ export default function Chat() {
                 }
             );
 
-            const data =
-                await response.json();
 
-            // Добавляем ответ модели
-            addMessage({
+            if (!response.body) {
 
-                id: Date.now() + 1,
+                console.error(
+                    "Нет response.body"
+                );
 
-                role: "assistant",
+                return;
+            }
 
-                content: data.response
-            });
+
+            // =========================
+            // STREAM READER
+            // =========================
+            const reader =
+                response.body.getReader();
+
+            const decoder =
+                new TextDecoder();
+
+
+            let fullText = "";
+
+
+            // =========================
+            // ЧТЕНИЕ STREAM
+            // =========================
+            while (true) {
+
+                const {
+                    done,
+                    value
+                } = await reader.read();
+
+
+                if (done) break;
+
+
+                // chunk текста
+                const chunk =
+                    decoder.decode(value);
+
+
+                // накапливаем текст
+                fullText += chunk;
+
+
+                // обновляем assistant message
+                setMessages((prev: any[]) =>
+
+                    prev.map((msg) =>
+
+                        msg.id === assistantId
+
+                            ? {
+                                ...msg,
+                                content: fullText
+                            }
+
+                            : msg
+                    )
+                );
+            }
 
         } catch (error) {
 
-            console.error(error);
+            console.error(
+                "Ошибка отправки",
+                error
+            );
 
         } finally {
 
@@ -162,7 +262,7 @@ export default function Chat() {
 
 
     // =========================
-    // EMPTY SCREEN
+    // EMPTY CHAT
     // =========================
     if (!currentChatId) {
 
@@ -186,19 +286,24 @@ export default function Chat() {
     }
 
 
+    // =========================
+    // UI
+    // =========================
     return (
 
         <div
             className="
+                flex-1
                 flex
                 flex-col
                 h-screen
-                flex-1
-                bg-[#0a0a0a]
+                bg-[#0f0f0f]
             "
         >
 
+            {/* ========================= */}
             {/* MESSAGES */}
+            {/* ========================= */}
             <div
                 className="
                     flex-1
@@ -215,19 +320,35 @@ export default function Chat() {
                     "
                 >
 
-                    {messages.map(
-                        (message) => (
+                    {messages.map((message) => (
 
-                            <MessageBubble
-                                key={message.id}
-                                role={message.role}
-                                content={
-                                    message.content
-                                }
-                            />
-                        )
+                        <MessageBubble
+                            key={message.id}
+                            role={message.role}
+                            content={message.content}
+                        />
+
+                    ))}
+
+
+                    {/* LOADING */}
+                    {loading && (
+
+                        <div
+                            className="
+                                text-zinc-500
+                                text-sm
+                                mt-2
+                            "
+                        >
+
+                            Модель печатает...
+
+                        </div>
                     )}
 
+
+                    {/* AUTO SCROLL */}
                     <div ref={bottomRef} />
 
                 </div>
@@ -235,11 +356,32 @@ export default function Chat() {
             </div>
 
 
+            {/* ========================= */}
             {/* INPUT */}
-            <ChatInput
-                onSend={handleSend}
-                loading={loading}
-            />
+            {/* ========================= */}
+            <div
+                className="
+                    border-t
+                    border-zinc-800
+                    p-4
+                    bg-[#0f0f0f]
+                "
+            >
+
+                <div
+                    className="
+                        max-w-4xl
+                        mx-auto
+                    "
+                >
+
+                    <ChatInput
+                        onSend={handleSend}
+                    />
+
+                </div>
+
+            </div>
 
         </div>
     );

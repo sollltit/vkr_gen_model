@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import {
+    useEffect,
+    useState
+} from "react";
 
 import {
     MessageSquarePlus,
@@ -12,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { useChatStore } from "@/store/chatStore";
 
 import { useAuthStore } from "@/store/authStore";
+
 
 
 export default function Sidebar() {
@@ -31,6 +35,8 @@ export default function Sidebar() {
     );
 
 
+    const [searchQuery, setSearchQuery] =
+    useState("");
     // =========================
     // CHAT STORE
     // =========================
@@ -47,6 +53,7 @@ export default function Sidebar() {
     // =========================
     useEffect(() => {
 
+        
         async function loadChats() {
 
             if (!user) return;
@@ -129,7 +136,57 @@ export default function Sidebar() {
     }
 }
 
+    async function handleSearch(
+            value: string
+        ) {
 
+            setSearchQuery(value);
+
+            if (!user) return;
+
+            // Если поиск пустой —
+            // загружаем обычные чаты
+            if (!value.trim()) {
+
+                try {
+
+                    const response = await fetch(
+
+                        `http://127.0.0.1:8000/chats/${user.user_id}`
+
+                    );
+
+                    const data =
+                        await response.json();
+
+                    setChats(data.chats);
+
+                } catch (error) {
+
+                    console.error(error);
+                }
+
+                return;
+            }
+
+            try {
+
+                const response = await fetch(
+
+                    `http://127.0.0.1:8000/search_chats/${user.user_id}?query=${value}`
+
+                );
+
+                const data =
+                    await response.json();
+
+                setChats(data.chats);
+
+            } catch (error) {
+
+                console.error(error);
+            }
+        }
     // =========================
     // DELETE CHAT
     // =========================
@@ -214,7 +271,35 @@ export default function Sidebar() {
                     Новый чат
 
                 </button>
+                <div className="mt-3">
 
+                    <input
+
+                        type="text"
+
+                        placeholder="Поиск в чатах"
+
+                        value={searchQuery}
+
+                        onChange={(e) =>
+                            handleSearch(e.target.value)
+                        }
+
+                        className="
+                            w-full
+                            bg-zinc-900
+                            border
+                            border-zinc-800
+                            rounded-xl
+                            p-3
+                            text-sm
+                            text-white
+                            outline-none
+                            focus:border-zinc-700
+                        "
+                    />
+
+                </div>
             </div>
 
 

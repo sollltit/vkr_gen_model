@@ -13,8 +13,8 @@ from back.database import engine, SessionLocal
 from back.models import Base, Chat, Message, User
 from sqlalchemy.orm import Session
 from back.auth import hash_password, verify_password
-
-
+from fastapi.responses import StreamingResponse
+import asyncio
 
 load_dotenv()
 
@@ -590,4 +590,134 @@ def delete_chat(
         "message": "Чат удалён"
     }
 
-# print(search_web("NVIDIA GeForce RTX 5000 series specs"))
+
+# =========================
+# SEARCH CHATS
+# =========================
+@app.get("/search_chats/{user_id}")
+def search_chats(
+    user_id: int,
+    query: str,
+    db: Session = Depends(get_db)
+):
+
+    # Все чаты пользователя
+    chats = db.query(Chat).filter(
+        Chat.user_id == user_id
+    ).all()
+
+    result_chats = []
+
+    for chat in chats:
+
+        # Поиск по title
+        title_match = query.lower() in (
+            chat.title or ""
+        ).lower()
+
+        # Поиск по сообщениям
+        message_match = False
+
+        for msg in chat.messages:
+
+            if query.lower() in (
+                msg.content or ""
+            ).lower():
+
+                message_match = True
+                break
+
+        if title_match or message_match:
+
+            result_chats.append({
+
+                "id": chat.id,
+
+                "title": chat.title
+            })
+
+    return {
+
+        "chats": result_chats
+    }
+
+# =========================
+# STREAM CHAT
+# =========================
+@app.post("/chat_stream")
+async def chat_stream(
+    req: Request,
+    db: Session = Depends(get_db)
+):
+
+    data = await req.json()
+
+    chat_id = data.get("chat_id")
+
+    messages = data.get("messages", [])
+
+    async def generate_stream():
+
+        # =========================
+        # Генерация полного ответа
+        # =========================
+        answer = pipeline(messages)
+
+
+        # =========================
+        # Сохраняем user message
+        # =========================
+        last_user_message = messages[-1]
+
+        user_msg = Message(
+            chat_id=chat_id,
+            role="user",
+            content=last_user_message["content"]
+        )
+
+        db.add(user_msg)
+
+
+        # =========================
+        # Streaming tokens
+        # =========================
+        current_text = ""
+
+        for token in answer.split():
+
+            await asyncio.sleep(0.08)
+
+            yield token + " "
+
+        # =========================
+        # Сохраняем assistant message
+        # =========================
+        assistant_msg = Message(
+            chat_id=chat_id,
+            role="assistant",
+            content=current_text
+        )
+
+        db.add(assistant_msg)
+
+
+        # =========================
+        # Обновляем title
+        # =========================
+        chat = db.query(Chat).filter(
+            Chat.id == chat_id
+        ).first()
+
+        if chat and chat.title == "Новый чат":
+
+            chat.title = last_user_message[
+                "content"
+            ][:30]
+
+
+        db.commit()
+
+    return StreamingResponse(
+        generate_stream(),
+        media_type="text/plain"
+    )
