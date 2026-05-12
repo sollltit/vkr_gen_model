@@ -4,14 +4,19 @@ import ReactMarkdown from "react-markdown";
 
 import remarkGfm from "remark-gfm";
 
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import remarkMath from "remark-math";
 
-import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
+import rehypeKatex from "rehype-katex";
 
+import rehypeHighlight from "rehype-highlight";
+
+import "katex/dist/katex.min.css";
+
+import "highlight.js/styles/github-dark.css";
 
 interface Props {
 
-    role: "user" | "assistant";
+    role: string;
 
     content: string;
 }
@@ -28,27 +33,20 @@ export default function MessageBubble({
 
         <div
             className={`
-                w-full
                 flex
                 mb-6
-                ${
-                    isUser
-                        ? "justify-end"
-                        : "justify-start"
-                }
+                ${isUser ? "justify-end" : "justify-start"}
             `}
         >
+
             <div
                 className={`
-                    max-w-[85%]
+                    max-w-[850px]
+                    rounded-2xl
                     px-5
                     py-4
-                    rounded-2xl
-                    text-[15px]
                     leading-7
                     overflow-hidden
-                    whitespace-pre-wrap
-                    break-words
                     ${
                         isUser
                             ? "bg-zinc-800 text-white"
@@ -56,46 +54,59 @@ export default function MessageBubble({
                     }
                 `}
             >
-<ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
 
-                        code(props) {
+                <div
+                    className="
+                        prose
+                        prose-invert
+                        max-w-none
 
-                            const {
-                                children,
-                                className,
-                                ...rest
-                            } = props;
+                        prose-headings:text-white
 
-                            const match = /language-(\w+)/.exec(
-                                className || ""
-                            );
+                        prose-p:text-zinc-200
 
-                            return match ? (
+                        prose-strong:text-white
 
-                                <SyntaxHighlighter
-                                    style={oneDark}
-                                    language={match[1]}
-                                    PreTag="div"
-                                >
-                                    {String(children).replace(/\n$/, "")}
-                                </SyntaxHighlighter>
+                        prose-code:text-blue-300
 
-                            ) : (
+                        prose-pre:bg-[#111111]
+                        prose-pre:border
+                        prose-pre:border-zinc-800
+                        prose-pre:rounded-xl
+                        prose-pre:p-4
 
-                                <code
-                                    className="bg-zinc-800 px-1 py-0.5 rounded"
-                                    {...rest}
-                                >
-                                    {children}
-                                </code>
-                            );
-                        }
-                    }}
+                        prose-table:w-full
+                        prose-table:border-collapse
+
+                        prose-th:border
+                        prose-th:border-zinc-700
+                        prose-th:p-2
+
+                        prose-td:border
+                        prose-td:border-zinc-700
+                        prose-td:p-2
+                    "
                 >
-                    {content}
-                </ReactMarkdown>
+
+                    <ReactMarkdown
+                        remarkPlugins={[
+                            remarkGfm,
+                            remarkMath
+                        ]}
+
+                        rehypePlugins={[
+                            rehypeHighlight,
+                            [rehypeKatex, {
+                                strict: false
+                            }]
+                        ]}
+                    >
+
+                        {content}
+
+                    </ReactMarkdown>
+
+                </div>
 
             </div>
 

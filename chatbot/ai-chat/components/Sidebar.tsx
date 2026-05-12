@@ -192,7 +192,7 @@ export default function Sidebar() {
     // =========================
     async function handleDeleteChat(
         chatId: number
-    ) {
+) {
 
         try {
 
@@ -205,12 +205,24 @@ export default function Sidebar() {
                 }
             );
 
-            // Обновляем список
+            // =========================
+            // ОБНОВЛЯЕМ СПИСОК ЧАТОВ
+            // =========================
             const updatedChats = chats.filter(
                 (chat) => chat.id !== chatId
             );
 
             setChats(updatedChats);
+
+
+            // =========================
+            // ЕСЛИ УДАЛИЛИ ТЕКУЩИЙ ЧАТ
+            // =========================
+            if (currentChatId === chatId) {
+
+                // сбрасываем текущий чат
+                setCurrentChat(null);
+            }
 
         } catch (error) {
 
@@ -219,7 +231,7 @@ export default function Sidebar() {
                 error
             );
         }
-    }
+}
 
 
     // =========================

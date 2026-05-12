@@ -20,7 +20,7 @@ interface ChatStore {
     ) => void;
 
     setCurrentChat: (
-        id: number
+        id: number | null
     ) => void;
 }
 

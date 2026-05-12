@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 from dotenv import load_dotenv
-from back.model_functions import load_peft_model, format_math_expressions
+from back.model_functions import load_peft_model, clean_markdown
 import json
 from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from back.auth import hash_password, verify_password
 from fastapi.responses import StreamingResponse
 import asyncio
+from back.text_form import normalize_markdown, format_math_expressions, fix_latex
 
 load_dotenv()
 
@@ -159,8 +160,21 @@ def generate_answer(messages):
 
     generated_tokens = outputs[0][input_length:]
 
-    return format_math_expressions(tokenizer.decode(generated_tokens, skip_special_tokens=True))
+    decoded = tokenizer.decode(
+    generated_tokens,
+    skip_special_tokens=True
+    )
 
+    # math first
+    decoded = fix_latex(decoded)
+
+    # markdown second
+    decoded = normalize_markdown(decoded)
+
+    # math symbols
+    decoded = format_math_expressions(decoded)
+
+    return decoded
 
 # =========================
 # 🔹 Логика (search + LLM)
@@ -652,72 +666,87 @@ async def chat_stream(
 
     data = await req.json()
 
-    chat_id = data.get("chat_id")
-
     messages = data.get("messages", [])
 
-    async def generate_stream():
+    chat_id = data.get("chat_id")
+
+
+    # =========================
+    # СОХРАНЯЕМ USER MESSAGE
+    # =========================
+    last_user_message = messages[-1]
+
+    db_message = Message(
+
+        chat_id=chat_id,
+
+        role="user",
+
+        content=last_user_message["content"]
+    )
+
+    db.add(db_message)
+
+    db.commit()
+
+
+    # =========================
+    # GENERATE
+    # =========================
+    answer = pipeline(messages)
+
+
+    # =========================
+    # STREAM
+    # =========================
+    async def generate():
+
+        full_text = ""
+
+        for char in answer:
+
+            full_text += char
+
+            yield char
+
+            await asyncio.sleep(0.003)
 
         # =========================
-        # Генерация полного ответа
-        # =========================
-        answer = pipeline(messages)
-
-
-        # =========================
-        # Сохраняем user message
-        # =========================
-        last_user_message = messages[-1]
-
-        user_msg = Message(
-            chat_id=chat_id,
-            role="user",
-            content=last_user_message["content"]
-        )
-
-        db.add(user_msg)
-
-
-        # =========================
-        # Streaming tokens
-        # =========================
-        current_text = ""
-
-        for token in answer.split():
-
-            await asyncio.sleep(0.08)
-
-            yield token + " "
-
-        # =========================
-        # Сохраняем assistant message
-        # =========================
-        assistant_msg = Message(
-            chat_id=chat_id,
-            role="assistant",
-            content=current_text
-        )
-
-        db.add(assistant_msg)
-
-
-        # =========================
-        # Обновляем title
+        # АВТО-ПЕРЕИМЕНОВАНИЕ ЧАТА
         # =========================
         chat = db.query(Chat).filter(
             Chat.id == chat_id
         ).first()
 
+        # Если чат ещё "Новый чат"
         if chat and chat.title == "Новый чат":
 
-            chat.title = last_user_message[
-                "content"
-            ][:30]
+            first_text = last_user_message["content"]
 
+            # Ограничиваем длину
+            generated_title = first_text[:40]
+
+            chat.title = generated_title
+
+            db.commit()
+        # =========================
+        # СОХРАНЯЕМ AI MESSAGE
+        # =========================
+        assistant_message = Message(
+
+            chat_id=chat_id,
+
+            role="assistant",
+
+            content=full_text
+        )
+
+        db.add(assistant_message)
 
         db.commit()
 
+
     return StreamingResponse(
-        generate_stream(),
+        generate(),
         media_type="text/plain"
     )

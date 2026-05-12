@@ -157,26 +157,43 @@ def generate_response_peft(prompt):
     return response
     
 
-def format_math_expressions(text: str) -> str:
-    """
-    Приводит LaTeX-формулы к корректному виду для отображения в Streamlit/Markdown.
-    НЕ ломает LaTeX, а наоборот — оборачивает его в $...$
-    """
+def clean_markdown(text: str):
 
-    # 1. Убираем лишние escape-символы типа \\ → \
-    text = text.replace("\\\\", "\\")
+    # Заголовки
+    text = re.sub(
+        r"(#{1,6}\s)",
+        r"\n\n\1",
+        text
+    )
 
-    # 2. Формулы в квадратных скобках [ ... ] → $$ ... $$
-    text = re.sub(r'\[\s*(.*?)\s*\]', r'$$\1$$', text, flags=re.DOTALL)
+    # Списки
+    text = re.sub(
+        r"(\n?)([-*]\s)",
+        r"\n\2",
+        text
+    )
 
-    # 3. Inline формулы \( ... \) → $ ... $
-    text = re.sub(r'\\\((.*?)\\\)', r'$\1$', text)
+    # Нумерованные списки
+    text = re.sub(
+        r"(\d+\.\s)",
+        r"\n\1",
+        text
+    )
 
-    # 4. Уже существующие $$ не трогаем, но чистим лишние пробелы
-    text = re.sub(r'\$\$\s*(.*?)\s*\$\$', r'$$\1$$', text, flags=re.DOTALL)
+    # Удаляем слишком много переносов
+    text = re.sub(
+        r"\n{3,}",
+        "\n\n",
+        text
+    )
 
-    # 5. Чистим дубли пробелов
-    text = re.sub(r'\n{3,}', '\n\n', text)
+    text = re.sub(
+    r"python\s+def",
+    "```python\ndef",
+    text
+)
 
-    return text
-    
+    if "```python" in text and not text.strip().endswith("```"):
+        text += "\n```"
+        
+    return text.strip()

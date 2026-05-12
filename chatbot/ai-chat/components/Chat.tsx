@@ -20,9 +20,11 @@ export default function Chat() {
     // =========================
     // CHAT STORE
     // =========================
-    const currentChatId = useChatStore(
-        (state) => state.currentChatId
-    );
+    const {
+    currentChatId,
+    chats,
+    setChats
+    } = useChatStore();
 
 
     // =========================
@@ -133,6 +135,28 @@ export default function Chat() {
         // Сразу показываем сообщение
         addMessage(userMessage);
 
+        // =========================
+        // REALTIME CHAT TITLE
+        // =========================
+        const updatedChats = chats.map((chat) => {
+
+            if (
+                chat.id === currentChatId &&
+                chat.title === "Новый чат"
+            ) {
+
+                return {
+
+                    ...chat,
+
+                    title: text.slice(0, 40)
+                };
+            }
+
+            return chat;
+        });
+
+        setChats(updatedChats);
 
         // =========================
         // ВРЕМЕННОЕ AI MESSAGE
