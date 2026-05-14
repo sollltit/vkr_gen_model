@@ -2,66 +2,42 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { useChatStore } from "@/store/chatStore";
+import { useMessageStore } from "@/store/messageStore";
+
 import MessageBubble from "./MessageBubble";
-
-import ChatInput from "./ChatInput";
-
-import {
-    useMessageStore
-} from "@/store/messageStore";
-
-import {
-    useChatStore
-} from "@/store/chatStore";
 
 
 export default function Chat() {
 
-    // =========================
-    // CHAT STORE
-    // =========================
-    const {
-    currentChatId,
-    chats,
-    setChats
-    } = useChatStore();
+    const [isLoading, setIsLoading] =
+    useState(false);
+    const [input, setInput] = useState("");
 
+    const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // =========================
-    // MESSAGE STORE
-    // =========================
+    const currentChatId = useChatStore(
+        (state) => state.currentChatId
+    );
+
+    const chats = useChatStore(
+        (state) => state.chats
+    );
+
+    const setChats = useChatStore(
+        (state) => state.setChats
+    );
+
     const {
         messages,
         setMessages,
-        addMessage
+        addMessage,
+        updateLastMessage
     } = useMessageStore();
 
 
     // =========================
-    // LOADING
-    // =========================
-    const [loading, setLoading] =
-        useState(false);
-
-
-    // =========================
-    // AUTO SCROLL
-    // =========================
-    const bottomRef =
-        useRef<HTMLDivElement>(null);
-
-
-    useEffect(() => {
-
-        bottomRef.current?.scrollIntoView({
-            behavior: "smooth"
-        });
-
-    }, [messages]);
-
-
-    // =========================
-    // ЗАГРУЗКА СООБЩЕНИЙ ЧАТА
+    // LOAD MESSAGES
     // =========================
     useEffect(() => {
 
@@ -77,17 +53,10 @@ export default function Chat() {
             try {
 
                 const response = await fetch(
-
                     `http://127.0.0.1:8000/messages/${currentChatId}`
-
                 );
 
                 const data = await response.json();
-
-                console.log(
-                    "MESSAGES:",
-                    data
-                );
 
                 setMessages(
                     data.messages || []
@@ -95,10 +64,7 @@ export default function Chat() {
 
             } catch (error) {
 
-                console.error(
-                    "Ошибка загрузки сообщений",
-                    error
-                );
+                console.error(error);
             }
         }
 
@@ -108,97 +74,55 @@ export default function Chat() {
 
 
     // =========================
+    // AUTO SCROLL
+    // =========================
+    useEffect(() => {
+
+        messagesEndRef.current?.scrollIntoView({
+            behavior: "smooth"
+        });
+
+    }, [messages]);
+
+
+    // =========================
     // SEND MESSAGE
     // =========================
-    async function handleSend(
-        text: string
-    ) {
+    async function handleSend() {
+
+        if (!input.trim()) return;
 
         if (!currentChatId) return;
 
-        if (!text.trim()) return;
-
-
-        // =========================
-        // USER MESSAGE
-        // =========================
         const userMessage = {
 
-            id: Date.now(),
+            role: "user",
 
-            role: "user" as const,
-
-            content: text
+            content: input
         };
 
-
-        // Сразу показываем сообщение
         addMessage(userMessage);
 
-        // =========================
-        // REALTIME CHAT TITLE
-        // =========================
-        const updatedChats = chats.map((chat) => {
-
-            if (
-                chat.id === currentChatId &&
-                chat.title === "Новый чат"
-            ) {
-
-                return {
-
-                    ...chat,
-
-                    title: text.slice(0, 40)
-                };
-            }
-
-            return chat;
-        });
-
-        setChats(updatedChats);
-
-        // =========================
-        // ВРЕМЕННОЕ AI MESSAGE
-        // =========================
-        const assistantId =
-            Date.now() + 1;
-
+        setInput("");
 
         addMessage({
-
-            id: assistantId,
-
             role: "assistant",
-
             content: ""
         });
 
-
-        setLoading(true);
-
-
         try {
 
-            // =========================
-            // STREAM REQUEST
-            // =========================
             const response = await fetch(
-
                 "http://127.0.0.1:8000/chat_stream",
-
                 {
                     method: "POST",
 
                     headers: {
-                        "Content-Type":
-                            "application/json"
+                        "Content-Type": "application/json"
                     },
 
                     body: JSON.stringify({
-
                         chat_id: currentChatId,
-
                         messages: [
                             ...messages,
                             userMessage
@@ -207,33 +131,14 @@ export default function Chat() {
                 }
             );
 
+            const reader = response.body?.getReader();
 
-            if (!response.body) {
-
-                console.error(
-                    "Нет response.body"
-                );
-
-                return;
-            }
-
-
-            // =========================
-            // STREAM READER
-            // =========================
-            const reader =
-                response.body.getReader();
-
-            const decoder =
-                new TextDecoder();
-
+            const decoder = new TextDecoder();
 
             let fullText = "";
 
+            if (!reader) return;
 
-            // =========================
-            // ЧТЕНИЕ STREAM
-            // =========================
             while (true) {
 
                 const {
@@ -241,52 +146,45 @@ export default function Chat() {
                     value
                 } = await reader.read();
 
-
                 if (done) break;
 
+                const chunk = decoder.decode(value);
 
-                // chunk текста
-                const chunk =
-                    decoder.decode(value);
-
-
-                // накапливаем текст
                 fullText += chunk;
 
-
-                // обновляем assistant message
-                setMessages((prev: any[]) =>
-
-                    prev.map((msg) =>
-
-                        msg.id === assistantId
-
-                            ? {
-                                ...msg,
-                                content: fullText
-                            }
-
-                            : msg
-                    )
-                );
+                updateLastMessage(fullText);
             }
+
+            // обновляем title в sidebar
+            const updatedChats = chats.map((chat) => {
+
+                if (
+                    chat.id === currentChatId &&
+                    chat.title === "Новый чат"
+                ) {
+
+                    return {
+
+                        ...chat,
+
+                        title: input.slice(0, 40)
+                    };
+                }
+
+                return chat;
+            });
+
+            setChats(updatedChats);
 
         } catch (error) {
 
-            console.error(
-                "Ошибка отправки",
-                error
-            );
-
-        } finally {
-
-            setLoading(false);
+            console.error(error);
         }
     }
 
 
     // =========================
-    // EMPTY CHAT
+    // EMPTY STATE
     // =========================
     if (!currentChatId) {
 
@@ -294,25 +192,31 @@ export default function Chat() {
 
             <div
                 className="
-                    flex-1
                     flex
                     items-center
                     justify-center
-                    text-zinc-500
-                    text-2xl
+                    bg-[#f5f5f5]
+                    h - full
                 "
             >
 
-                Создайте чат
+                <h1
+                    className="
+                        text-4xl
+                        font-bold
+                        text-gray-400
+                    "
+                >
+
+                    Создайте чат
+
+                </h1>
 
             </div>
         );
     }
 
 
-    // =========================
-    // UI
-    // =========================
     return (
 
         <div
@@ -320,20 +224,18 @@ export default function Chat() {
                 flex-1
                 flex
                 flex-col
+                bg-[#f5f5f5]
                 h-screen
-                bg-[#0f0f0f]
             "
         >
 
-            {/* ========================= */}
             {/* MESSAGES */}
-            {/* ========================= */}
             <div
                 className="
                     flex-1
                     overflow-y-auto
                     px-6
-                    py-10
+                    py-8
                 "
             >
 
@@ -344,25 +246,32 @@ export default function Chat() {
                     "
                 >
 
-                    {messages.map((message) => (
+                    {messages.map((message, index) => (
 
                         <MessageBubble
-                            key={message.id}
+                            key={index}
                             role={message.role}
                             content={message.content}
                         />
 
                     ))}
 
+                    <div ref={messagesEndRef} />
+
+                </div>
+
+            </div>
 
                     {/* LOADING */}
-                    {loading && (
+                    {isLoading && (
 
                         <div
                             className="
-                                text-zinc-500
+                                px-4
+                                py-2
                                 text-sm
-                                mt-2
+                                text-gray-500
+                                italic
                             "
                         >
 
@@ -372,23 +281,13 @@ export default function Chat() {
                     )}
 
 
-                    {/* AUTO SCROLL */}
-                    <div ref={bottomRef} />
-
-                </div>
-
-            </div>
-
-
-            {/* ========================= */}
             {/* INPUT */}
-            {/* ========================= */}
             <div
                 className="
                     border-t
-                    border-zinc-800
-                    p-4
-                    bg-[#0f0f0f]
+                    border-gray-200
+                    bg-white
+                    p-6
                 "
             >
 
@@ -396,12 +295,61 @@ export default function Chat() {
                     className="
                         max-w-4xl
                         mx-auto
+                        flex
+                        gap-4
                     "
                 >
 
-                    <ChatInput
-                        onSend={handleSend}
+                    <input
+                        value={input}
+
+                        onChange={(e) =>
+                            setInput(e.target.value)
+                        }
+
+                        onKeyDown={(e) => {
+
+                            if (e.key === "Enter") {
+
+                                handleSend();
+                            }
+                        }}
+
+                        placeholder="Напишите сообщение..."
+
+                        className="
+                            flex-1
+                            bg-white
+                            border
+                            border-gray-300
+                            rounded-2xl
+                            px-5
+                            py-4
+                            outline-none
+                            text-gray-900
+                            focus:border-[#f0a3c8]
+                        "
                     />
+
+
+                    <button
+                        onClick={handleSend}
+
+                        className="
+                            bg-[#f0a3c8]
+                            hover:bg-[#f0a3c8]
+                            transition
+                            rounded-2xl
+                            px-8
+                            text-black
+                            font-medium
+                            border-pink-100
+                        "
+                    >
+
+                        Отправить
+
+                    </button>
 
                 </div>
 

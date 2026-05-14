@@ -6,8 +6,6 @@ import { create } from "zustand";
 // =========================
 export interface Message {
 
-    id: number;
-
     role: "user" | "assistant";
 
     content: string;
@@ -18,16 +16,19 @@ interface MessageStore {
 
     messages: Message[];
 
-    // setMessages теперь умеет:
-    // 1. принимать массив
-    // 2. принимать callback(prev => ...)
-    setMessages: any;
+    setMessages: (
+        messages: Message[]
+    ) => void;
 
     addMessage: (
         message: Message
     ) => void;
 
     clearMessages: () => void;
+
+    updateLastMessage: (
+        content: string
+    ) => void;
 }
 
 
@@ -37,39 +38,17 @@ interface MessageStore {
 export const useMessageStore =
     create<MessageStore>((set) => ({
 
-        // =========================
-        // STATE
-        // =========================
         messages: [],
 
 
         // =========================
         // SET MESSAGES
         // =========================
-        setMessages: (messages: any) => {
+        setMessages: (messages) =>
 
-            // Если передали функцию:
-            // setMessages(prev => ...)
-            if (typeof messages === "function") {
-
-                set((state) => ({
-
-                    messages: messages(
-                        state.messages
-                    )
-                }));
-
-            }
-
-            // Если передали массив:
-            // setMessages([...])
-            else {
-
-                set({
-                    messages
-                });
-            }
-        },
+            set({
+                messages
+            }),
 
 
         // =========================
@@ -87,11 +66,47 @@ export const useMessageStore =
 
 
         // =========================
-        // CLEAR MESSAGES
+        // CLEAR
         // =========================
         clearMessages: () =>
 
             set({
                 messages: []
+            }),
+
+
+        // =========================
+        // STREAM UPDATE
+        // =========================
+        updateLastMessage: (content) =>
+
+            set((state) => {
+
+                const updated = [
+                    ...state.messages
+                ];
+
+                if (
+                    updated.length === 0
+                ) {
+                    return {
+                        messages: []
+                    };
+                }
+
+                updated[
+                    updated.length - 1
+                ] = {
+
+                    ...updated[
+                        updated.length - 1
+                    ],
+
+                    content
+                };
+
+                return {
+                    messages: updated
+                };
             })
     }));

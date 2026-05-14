@@ -1,3 +1,5 @@
+// src/app/login/page.tsx
+
 "use client";
 
 import { useState } from "react";
@@ -16,76 +18,36 @@ export default function LoginPage() {
 
     const router = useRouter();
 
-    // Zustand login function
     const login = useAuthStore(
         (state) => state.login
     );
 
-
-    // =========================
-    // STATES
-    // =========================
     const [email, setEmail] = useState("");
 
-    const [password, setPassword] = useState("");
+    const [password, setPassword] =
+        useState("");
 
-    const [error, setError] = useState("");
+    const [showPassword, setShowPassword] =
+        useState(false);
 
-    const [loading, setLoading] = useState(false);
-
-    const [showPassword, setShowPassword] = useState(false);
-
-
-    // =========================
-    // Проверка русских букв
-    // =========================
-    function containsRussian(text: string) {
-
-        return /[А-Яа-яЁё]/.test(text);
-
-    }
+    const [error, setError] =
+        useState("");
 
 
-    // =========================
-    // LOGIN
-    // =========================
     async function handleLogin() {
 
         setError("");
 
-        // Проверка email
-        if (containsRussian(email)) {
-
-            setError(
-                "Email должен содержать только английские символы"
-            );
-
-            return;
-        }
-
-        // Проверка password
-        if (containsRussian(password)) {
-
-            setError(
-                "Пароль не должен содержать русские символы"
-            );
-
-            return;
-        }
-
         try {
 
-            setLoading(true);
-
             const response = await fetch(
-
                 "http://127.0.0.1:8000/login",
-
                 {
                     method: "POST",
 
                     headers: {
-                        "Content-Type": "application/json"
+                        "Content-Type":
+                            "application/json"
                     },
 
                     body: JSON.stringify({
@@ -95,10 +57,9 @@ export default function LoginPage() {
                 }
             );
 
-            const data = await response.json();
+            const data =
+                await response.json();
 
-
-            // Backend error
             if (data.error) {
 
                 setError(data.error);
@@ -106,28 +67,15 @@ export default function LoginPage() {
                 return;
             }
 
+            login(data);
 
-            // Сохраняем пользователя в Zustand
-            login({
-
-                user_id: data.user_id,
-
-                email: data.email
-
-            });
-
-
-            // Переход в чат
             router.push("/");
 
-        } catch (err) {
+        } catch {
 
-            setError("Ошибка подключения");
-
-        } finally {
-
-            setLoading(false);
-
+            setError(
+                "Ошибка подключения к API"
+            );
         }
     }
 
@@ -137,10 +85,11 @@ export default function LoginPage() {
         <main
             className="
                 min-h-screen
-                bg-black
+                bg-[#f5f5f5]
                 flex
                 items-center
                 justify-center
+                p-6
             "
         >
 
@@ -148,186 +97,188 @@ export default function LoginPage() {
                 className="
                     w-full
                     max-w-md
-                    bg-[#0f0f0f]
-                    border
-                    border-zinc-800
+                    bg-white
                     rounded-3xl
+                    shadow-sm
+                    border
+                    border-gray-200
                     p-8
-                    shadow-2xl
                 "
             >
 
-                {/* TITLE */}
                 <h1
                     className="
-                        text-4xl
-                        font-semibold
+                        text-3xl
+                        font-bold
                         text-center
-                        text-white
                         mb-8
+                        text-gray-900
                     "
                 >
+
                     Вход
+
                 </h1>
 
 
-                {/* EMAIL */}
-                <input
-                    type="email"
+                <div className="space-y-5">
 
-                    autoComplete="email"
-
-                    placeholder="Email"
-
-                    value={email}
-
-                    onChange={(e) =>
-                        setEmail(e.target.value)
-                    }
-
-                    className="
-                        w-full
-                        mb-4
-                        bg-zinc-900
-                        border
-                        border-zinc-700
-                        rounded-2xl
-                        px-4
-                        py-4
-                        text-white
-                        outline-none
-                    "
-                />
-
-
-                {/* PASSWORD CONTAINER */}
-                <div className="relative mb-4">
-
-                    {/* PASSWORD INPUT */}
                     <input
-                        type={
-                            showPassword
-                                ? "text"
-                                : "password"
-                        }
+                        type="email"
 
-                        autoComplete="current-password"
+                        placeholder="Email"
 
-                        placeholder="Пароль"
+                        autoComplete="email"
 
-                        value={password}
+                        value={email}
 
                         onChange={(e) =>
-                            setPassword(e.target.value)
-                        }
-
-                        className="
-                            w-full
-                            bg-zinc-900
-                            border
-                            border-zinc-700
-                            rounded-2xl
-                            px-4
-                            py-4
-                            pr-14
-                            text-white
-                            outline-none
-                        "
-                    />
-
-                    {/* EYE BUTTON */}
-                    <button
-                        type="button"
-
-                        onClick={() =>
-                            setShowPassword(
-                                !showPassword
+                            setEmail(
+                                e.target.value
                             )
                         }
 
                         className="
-                            absolute
-                            right-4
-                            top-1/2
-                            -translate-y-1/2
-                            text-zinc-400
-                            hover:text-white
+                            w-full
+                            border
+                            border-gray-300
+                            bg-[#f9fafb]
+                            rounded-2xl
+                            px-5
+                            py-4
+                            outline-none
+                            focus:border-[#f0a3c8]
+                            text-gray-900
+                        "
+                    />
+
+
+                    <div className="relative">
+
+                        <input
+                            type={
+                                showPassword
+                                    ? "text"
+                                    : "password"
+                            }
+
+                            placeholder="Пароль"
+
+                            autoComplete="current-password"
+
+                            value={password}
+
+                            onChange={(e) =>
+                                setPassword(
+                                    e.target.value
+                                )
+                            }
+
+                            className="
+                                w-full
+                                border
+                                border-gray-300
+                                bg-[#f9fafb]
+                                rounded-2xl
+                                px-5
+                                py-4
+                                pr-14
+                                outline-none
+                                focus:border-[#f0a3c8]
+                                text-gray-900
+                            "
+                        />
+
+                        <button
+                            type="button"
+
+                            onClick={() =>
+                                setShowPassword(
+                                    !showPassword
+                                )
+                            }
+
+                            className="
+                                absolute
+                                right-4
+                                top-1/2
+                                -translate-y-1/2
+                                text-gray-500
+                            "
+                        >
+
+                            {showPassword
+                                ? <EyeOff size={20} />
+                                : <Eye size={20} />
+                            }
+
+                        </button>
+
+                    </div>
+
+
+                    {error && (
+
+                        <div
+                            className="
+                                text-red-500
+                                text-sm
+                            "
+                        >
+
+                            {error}
+
+                        </div>
+                    )}
+
+
+                    <button
+                        onClick={handleLogin}
+
+                        className="
+                            w-full
+                            bg-[#f0a3c8]
+                            hover:bg-[#e592ba]
+                            transition
+                            rounded-2xl
+                            py-4
+                            text-black
+                            font-medium
                         "
                     >
 
-                        {showPassword
-                            ? <EyeOff size={20} />
-                            : <Eye size={20} />
+                        Войти
+
+                    </button>
+
+
+                    <button
+                        onClick={() =>
+                            router.push(
+                                "/register"
+                            )
                         }
+
+                        className="
+                            w-full
+                            bg-gray-100
+                            hover:bg-gray-200
+                            transition
+                            rounded-2xl
+                            py-4
+                            text-gray-900
+                            font-medium
+                        "
+                    >
+
+                        Регистрация
 
                     </button>
 
                 </div>
 
-
-                {/* ERROR */}
-                {error && (
-
-                    <div
-                        className="
-                            text-red-500
-                            mb-4
-                            text-sm
-                        "
-                    >
-                        {error}
-                    </div>
-
-                )}
-
-
-                {/* BUTTON */}
-                <button
-                    onClick={handleLogin}
-
-                    disabled={loading}
-
-                    className="
-                        w-full
-                        bg-white
-                        text-black
-                        rounded-2xl
-                        py-4
-                        font-medium
-                        hover:opacity-90
-                        transition
-                    "
-                >
-
-                    {loading
-                        ? "Вход..."
-                        : "Войти"}
-
-                </button>
-
-
-                {/* REGISTER LINK */}
-                <button
-                    onClick={() =>
-                        router.push("/register")
-                    }
-
-                    className="
-                        w-full
-                        mt-4
-                        text-zinc-400
-                        hover:text-white
-                        transition
-                    "
-                >
-
-                    Нет аккаунта? Зарегистрироваться
-
-                </button>
-
             </div>
 
         </main>
-
     );
 }

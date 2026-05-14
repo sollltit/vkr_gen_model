@@ -96,7 +96,7 @@ export default function ChatInput({
                         resize-none
                         rounded-2xl
                         bg-zinc-900
-                        text-white
+                        text-black
                         px-5
                         py-4
                         outline-none
@@ -122,7 +122,7 @@ export default function ChatInput({
                         bg-blue-600
                         hover:bg-blue-500
                         transition
-                        text-white
+                        text-black
                         disabled:opacity-50
                     "
                 >

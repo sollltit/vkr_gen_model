@@ -1,9 +1,8 @@
+// src/components/Sidebar.tsx
+
 "use client";
 
-import {
-    useEffect,
-    useState
-} from "react";
+import { useEffect, useState } from "react";
 
 import {
     MessageSquarePlus,
@@ -13,19 +12,16 @@ import {
 import { useRouter } from "next/navigation";
 
 import { useChatStore } from "@/store/chatStore";
-
 import { useAuthStore } from "@/store/authStore";
-
+import { useMessageStore } from "@/store/messageStore";
 
 
 export default function Sidebar() {
 
     const router = useRouter();
 
+    const [search, setSearch] = useState("");
 
-    // =========================
-    // AUTH
-    // =========================
     const user = useAuthStore(
         (state) => state.user
     );
@@ -34,12 +30,6 @@ export default function Sidebar() {
         (state) => state.logout
     );
 
-
-    const [searchQuery, setSearchQuery] =
-    useState("");
-    // =========================
-    // CHAT STORE
-    // =========================
     const {
         chats,
         currentChatId,
@@ -47,13 +37,16 @@ export default function Sidebar() {
         setChats
     } = useChatStore();
 
+    const clearMessages = useMessageStore(
+        (state) => state.clearMessages
+    );
+
 
     // =========================
-    // Загрузка чатов пользователя
+    // LOAD CHATS
     // =========================
     useEffect(() => {
 
-        
         async function loadChats() {
 
             if (!user) return;
@@ -61,29 +54,20 @@ export default function Sidebar() {
             try {
 
                 const response = await fetch(
-
                     `http://127.0.0.1:8000/chats/${user.user_id}`
-
                 );
 
                 const data = await response.json();
 
-                console.log("CHATS:", data);
-
                 setChats(
-
                     Array.isArray(data.chats)
                         ? data.chats
                         : []
-
                 );
 
             } catch (error) {
 
-                console.error(
-                    "Ошибка загрузки чатов",
-                    error
-                );
+                console.error(error);
             }
         }
 
@@ -93,78 +77,23 @@ export default function Sidebar() {
 
 
     // =========================
-    // CREATE CHAT
+    // SEARCH
     // =========================
-    async function handleCreateChat() {
+    useEffect(() => {
 
-    if (!user) return;
-
-    try {
-
-        const response = await fetch(
-
-            "http://127.0.0.1:8000/create_chat",
-
-            {
-                method: "POST",
-
-                headers: {
-                    "Content-Type": "application/json"
-                },
-
-                body: JSON.stringify({
-
-                    user_id: user.user_id
-                })
-            }
-        );
-
-        const newChat = await response.json();
-
-        setChats([
-            newChat,
-            ...(Array.isArray(chats)
-                ? chats
-                : [])
-        ]);
-
-        setCurrentChat(newChat.id);
-
-    } catch (error) {
-
-        console.error(error);
-    }
-}
-
-    async function handleSearch(
-            value: string
-        ) {
-
-            setSearchQuery(value);
+        async function searchChats() {
 
             if (!user) return;
 
-            // Если поиск пустой —
-            // загружаем обычные чаты
-            if (!value.trim()) {
+            if (!search.trim()) {
 
-                try {
+                const response = await fetch(
+                    `http://127.0.0.1:8000/chats/${user.user_id}`
+                );
 
-                    const response = await fetch(
+                const data = await response.json();
 
-                        `http://127.0.0.1:8000/chats/${user.user_id}`
-
-                    );
-
-                    const data =
-                        await response.json();
-
-                    setChats(data.chats);
-
-                } catch (error) {
-
-                    console.error(error);
-                }
+                setChats(data.chats || []);
 
                 return;
             }
@@ -172,71 +101,109 @@ export default function Sidebar() {
             try {
 
                 const response = await fetch(
-
-                    `http://127.0.0.1:8000/search_chats/${user.user_id}?query=${value}`
-
+                    `http://127.0.0.1:8000/search_chats/${user.user_id}?query=${search}`
                 );
 
-                const data =
-                    await response.json();
+                const data = await response.json();
 
-                setChats(data.chats);
+                setChats(data.chats || []);
 
             } catch (error) {
 
                 console.error(error);
             }
         }
+
+        const timeout = setTimeout(
+            searchChats,
+            300
+        );
+
+        return () => clearTimeout(timeout);
+
+    }, [search]);
+
+
+    // =========================
+    // CREATE CHAT
+    // =========================
+    async function handleCreateChat() {
+
+        if (!user) return;
+
+        try {
+
+            const response = await fetch(
+                "http://127.0.0.1:8000/create_chat",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        user_id: user.user_id
+                    })
+                }
+            );
+
+            const newChat = await response.json();
+
+            setChats([
+                newChat,
+                ...(Array.isArray(chats)
+                    ? chats
+                    : [])
+            ]);
+
+            setCurrentChat(newChat.id);
+
+            clearMessages();
+
+        } catch (error) {
+
+            console.error(error);
+        }
+    }
+
+
     // =========================
     // DELETE CHAT
     // =========================
     async function handleDeleteChat(
         chatId: number
-) {
+    ) {
 
         try {
 
             await fetch(
-
                 `http://127.0.0.1:8000/chat/${chatId}`,
-
                 {
                     method: "DELETE"
                 }
             );
 
-            // =========================
-            // ОБНОВЛЯЕМ СПИСОК ЧАТОВ
-            // =========================
             const updatedChats = chats.filter(
                 (chat) => chat.id !== chatId
             );
 
             setChats(updatedChats);
 
-
-            // =========================
-            // ЕСЛИ УДАЛИЛИ ТЕКУЩИЙ ЧАТ
-            // =========================
             if (currentChatId === chatId) {
 
-                // сбрасываем текущий чат
                 setCurrentChat(null);
+
+                clearMessages();
             }
 
         } catch (error) {
 
-            console.error(
-                "Ошибка удаления чата",
-                error
-            );
+            console.error(error);
         }
-}
+    }
 
 
-    // =========================
-    // LOGOUT
-    // =========================
     function handleLogout() {
 
         logout();
@@ -249,10 +216,10 @@ export default function Sidebar() {
 
         <div
             className="
-                w-[280px]
-                bg-[#111111]
+                w-[300px]
+                bg-white
                 border-r
-                border-zinc-800
+                border-gray-200
                 flex
                 flex-col
                 h-screen
@@ -260,7 +227,7 @@ export default function Sidebar() {
         >
 
             {/* HEADER */}
-            <div className="p-4">
+            <div className="p-4 space-y-4">
 
                 <button
                     onClick={handleCreateChat}
@@ -269,12 +236,13 @@ export default function Sidebar() {
                         flex
                         items-center
                         gap-2
-                        bg-zinc-900
-                        hover:bg-zinc-800
+                        bg-[#f0a3c8]
+                        hover:bg-[#f0a3c8]
                         transition
                         rounded-xl
                         p-3
-                        text-white
+                        text-black
+                        font-medium
                     "
                 >
 
@@ -283,39 +251,35 @@ export default function Sidebar() {
                     Новый чат
 
                 </button>
-                <div className="mt-3">
 
-                    <input
 
-                        type="text"
+                <input
+                    type="text"
 
-                        placeholder="Поиск в чатах"
+                    value={search}
 
-                        value={searchQuery}
+                    onChange={(e) =>
+                        setSearch(e.target.value)
+                    }
 
-                        onChange={(e) =>
-                            handleSearch(e.target.value)
-                        }
+                    placeholder="Поиск в чатах"
 
-                        className="
-                            w-full
-                            bg-zinc-900
-                            border
-                            border-zinc-800
-                            rounded-xl
-                            p-3
-                            text-sm
-                            text-white
-                            outline-none
-                            focus:border-zinc-700
-                        "
-                    />
+                    className="
+                        w-full
+                        bg-white
+                        border
+                        border-gray-300
+                        rounded-xl
+                        p-3
+                        outline-none
+                        focus:border-pink-500
+                    "
+                />
 
-                </div>
             </div>
 
 
-            {/* CHAT LIST */}
+            {/* CHATS */}
             <div
                 className="
                     flex-1
@@ -337,16 +301,14 @@ export default function Sidebar() {
                             rounded-xl
                             mb-2
                             transition
-                            cursor-pointer
                             ${
                                 currentChatId === chat.id
-                                    ? "bg-zinc-800"
-                                    : "hover:bg-zinc-900"
+                                    ? "bg-[#f0a3c8]"
+                                    : "hover:bg-gray-100"
                             }
                         `}
                     >
 
-                        {/* CHAT BUTTON */}
                         <button
                             onClick={() =>
                                 setCurrentChat(chat.id)
@@ -356,7 +318,7 @@ export default function Sidebar() {
                                 flex-1
                                 text-left
                                 truncate
-                                text-white
+                                text-gray-900
                             "
                         >
 
@@ -365,7 +327,6 @@ export default function Sidebar() {
                         </button>
 
 
-                        {/* DELETE BUTTON */}
                         <button
                             onClick={() =>
                                 handleDeleteChat(chat.id)
@@ -373,9 +334,8 @@ export default function Sidebar() {
 
                             className="
                                 ml-2
-                                text-zinc-400
+                                text-gray-400
                                 hover:text-red-500
-                                transition
                             "
                         >
 
@@ -395,15 +355,14 @@ export default function Sidebar() {
                 className="
                     p-4
                     border-t
-                    border-zinc-800
+                    border-gray-200
                 "
             >
 
-                {/* EMAIL */}
                 <div
                     className="
                         text-sm
-                        text-zinc-400
+                        text-gray-500
                         mb-3
                         truncate
                     "
@@ -414,18 +373,18 @@ export default function Sidebar() {
                 </div>
 
 
-                {/* LOGOUT */}
                 <button
                     onClick={handleLogout}
 
                     className="
                         w-full
-                        bg-zinc-900
-                        hover:bg-zinc-800
+                        bg-gray-100
+                        hover:bg-gray-200
                         transition
                         rounded-xl
                         p-3
-                        text-white
+                        text-gray-900
+                        font-medium
                     "
                 >
 
