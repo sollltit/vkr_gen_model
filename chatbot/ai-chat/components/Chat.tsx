@@ -11,10 +11,12 @@ import MessageBubble from "./MessageBubble";
 export default function Chat() {
 
     const [isLoading, setIsLoading] =
-    useState(false);
+        useState(false);
+
     const [input, setInput] = useState("");
 
-    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const messagesEndRef =
+        useRef<HTMLDivElement>(null);
 
     const currentChatId = useChatStore(
         (state) => state.currentChatId
@@ -65,6 +67,8 @@ export default function Chat() {
             } catch (error) {
 
                 console.error(error);
+
+                setIsLoading(false);
             }
         }
 
@@ -82,7 +86,7 @@ export default function Chat() {
             behavior: "smooth"
         });
 
-    }, [messages]);
+    }, [messages, isLoading]);
 
 
     // =========================
@@ -93,6 +97,8 @@ export default function Chat() {
         if (!input.trim()) return;
 
         if (!currentChatId) return;
+
+        setIsLoading(true);
 
         const userMessage = {
 
@@ -155,7 +161,9 @@ export default function Chat() {
                 updateLastMessage(fullText);
             }
 
-            // обновляем title в sidebar
+            // =========================
+            // UPDATE CHAT TITLE
+            // =========================
             const updatedChats = chats.map((chat) => {
 
                 if (
@@ -176,9 +184,13 @@ export default function Chat() {
 
             setChats(updatedChats);
 
+            setIsLoading(false);
+
         } catch (error) {
 
             console.error(error);
+
+            setIsLoading(false);
         }
     }
 
@@ -196,7 +208,7 @@ export default function Chat() {
                     items-center
                     justify-center
                     bg-[#f5f5f5]
-                    h - full
+                    h-full
                 "
             >
 
@@ -246,6 +258,7 @@ export default function Chat() {
                     "
                 >
 
+                    {/* CHAT MESSAGES */}
                     {messages.map((message, index) => (
 
                         <MessageBubble
@@ -256,29 +269,46 @@ export default function Chat() {
 
                     ))}
 
-                    <div ref={messagesEndRef} />
-
-                </div>
-
-            </div>
 
                     {/* LOADING */}
                     {isLoading && (
 
                         <div
                             className="
-                                px-4
-                                py-2
-                                text-sm
-                                text-gray-500
-                                italic
+                                flex
+                                justify-start
+                                mb-6
                             "
                         >
 
-                            Модель печатает...
+                            <div
+                                className="
+                                    bg-[#eeeeee]
+                                    text-gray-500
+                                    px-5
+                                    py-3
+                                    rounded-2xl
+                                    italic
+                                    text-sm
+                                    shadow-sm
+                                    max-w-[80%]
+                                "
+                            >
+
+                                Генерация ответа...
+
+                            </div>
 
                         </div>
+
                     )}
+
+
+                    <div ref={messagesEndRef} />
+
+                </div>
+
+            </div>
 
 
             {/* INPUT */}
@@ -358,3 +388,4 @@ export default function Chat() {
         </div>
     );
 }
+
