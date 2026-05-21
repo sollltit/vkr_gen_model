@@ -4,9 +4,9 @@ import re
 
 API_URL = "http://localhost:8000/chat"
 
-st.set_page_config(page_title="тест", layout="centered")
+st.set_page_config(page_title="валидация модели", layout="centered")
 
-st.title("Chat 💬 ")
+st.title("Чат")
 
 
 
