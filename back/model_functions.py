@@ -16,11 +16,8 @@ lora_path = os.getenv("LORA_PATH", './qwen2.5_fine-tune/checkpoint-210')
 tavily_api_key = os.getenv("TAVILY_API_KEY")
 sys_prompt = os.getenv("SYSTEM_PROMPT")
 
-# =========================
-# 🔹 Загрузка модели
-# =========================
 
-
+# загрузкат модели
 @lru_cache(maxsize=1)
 def load_peft_model(model_path=model_path, lora_path=lora_path):
     """Загрузка модели + LoRA"""
@@ -44,28 +41,25 @@ def load_peft_model(model_path=model_path, lora_path=lora_path):
         )
 
         model = PeftModel.from_pretrained(model, lora_path)
-
         model.eval()
 
         tokenizer = AutoTokenizer.from_pretrained(model_path)
 
-        print("✅ Модель загружена")
+        print("Модель загружена")
         return model, tokenizer
 
     except Exception as e:
-        print(f"❌ Ошибка при загрузке модели: {e}")
+        print(f"Ошибка при загрузке модели: {e}")
         raise
 
 
-# =========================
-# 🔹 Поиск в интернете
-# =========================
+# поиск
 def search_web(query):
+
     """Поиск через Tavily API"""
 
     if not tavily_api_key:
         return ""
-
     try:
         response = requests.post(
             "https://api.tavily.com/search",
@@ -79,29 +73,22 @@ def search_web(query):
         )
 
         data = response.json()
-
         results = []
         for item in data.get("results", []):
             content = item.get("content", "")
             if content:
                 results.append(content)
-
         return "\n".join(results)
-
     except Exception as e:
         print(f"Ошибка поиска: {e}")
         return ""
 
 
-# =========================
-# 🔹 Генерация ответа
-# =========================
+# генерация ответа
 def generate_response_peft(prompt):
     """Генерация ответа с optional search"""
 
     model, tokenizer = load_peft_model()
-
-    # простая эвристика — когда нужен поиск
     search_keywords = [
         "кто", "что", "новости", "последние",
         "современные", "актуальные", 'недавно', 'характеристики', 'совместимость'
@@ -150,37 +137,32 @@ def generate_response_peft(prompt):
         generated_tokens,
         skip_special_tokens=True
     )
-
-    # если у тебя есть render_latex
-    # formatted = format_math_expressions(response)
-
     return response
     
 
 def clean_markdown(text: str):
 
-    # Заголовки
+    # заголовки
     text = re.sub(
         r"(#{1,6}\s)",
         r"\n\n\1",
         text
     )
 
-    # Списки
+    # списки
     text = re.sub(
         r"(\n?)([-*]\s)",
         r"\n\2",
         text
     )
 
-    # Нумерованные списки
+    # нумерованные списки
     text = re.sub(
         r"(\d+\.\s)",
         r"\n\1",
         text
     )
 
-    # Удаляем слишком много переносов
     text = re.sub(
         r"\n{3,}",
         "\n\n",

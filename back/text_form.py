@@ -3,9 +3,6 @@ import re
 
 def normalize_markdown(text: str):
 
-    # =========================
-    # TABLES
-    # =========================
 
     # Переносы перед таблицами
     text = re.sub(
@@ -17,9 +14,6 @@ def normalize_markdown(text: str):
     # Чиним таблицы в одну строку
     text = text.replace("| |", "|\n|")
 
-    # =========================
-    # HEADERS
-    # =========================
 
     text = re.sub(
         r"(#{1,6}\s)",
@@ -27,9 +21,6 @@ def normalize_markdown(text: str):
         text
     )
 
-    # =========================
-    # BULLET LISTS
-    # =========================
 
     text = re.sub(
         r"\s-\s",
@@ -43,9 +34,7 @@ def normalize_markdown(text: str):
         text
     )
 
-    # =========================
-    # NUMBERED LISTS
-    # =========================
+
 
     text = re.sub(
         r"\s(\d+\.)\s",
@@ -53,9 +42,6 @@ def normalize_markdown(text: str):
         text
     )
 
-    # =========================
-    # CODE BLOCKS
-    # =========================
 
     # python def
     text = re.sub(
@@ -75,19 +61,12 @@ def normalize_markdown(text: str):
     if text.count("```") % 2 != 0:
         text += "\n```"
 
-    # =========================
-    # PARAGRAPHS
-    # =========================
-
     text = re.sub(
         r"\.\s([А-ЯA-Z])",
         r".\n\n\1",
         text
     )
 
-    # =========================
-    # MULTIPLE NEWLINES
-    # =========================
 
     text = re.sub(
         r"\n{3,}",
@@ -102,14 +81,6 @@ def normalize_markdown(text: str):
 
 def format_math_expressions(text: str) -> str:
 
-    """
-    Безопасное форматирование математики,
-    не ломающее markdown и code blocks.
-    """
-
-    # =========================
-    # Вырезаем code blocks
-    # =========================
     code_blocks = []
 
     def save_code(match):
@@ -125,9 +96,6 @@ def format_math_expressions(text: str) -> str:
         flags=re.DOTALL
     )
 
-    # =========================
-    # Inline code
-    # =========================
     inline_codes = []
 
     def save_inline(match):
@@ -142,34 +110,24 @@ def format_math_expressions(text: str) -> str:
         text
     )
 
-    # =========================
-    # Форматируем ТОЛЬКО математику
-    # =========================
-
-    # Умножение между числами
     text = re.sub(
         r"(\d)\s*\*\s*(\d)",
         r"\1 × \2",
         text
     )
 
-    # Деление между числами
     text = re.sub(
         r"(\d)\s*/\s*(\d)",
         r"\1 ÷ \2",
         text
     )
 
-    # Степени
     text = re.sub(
         r"(\d+)\^(\d+)",
         r"\1^\2",
         text
     )
 
-    # =========================
-    # Возвращаем inline code
-    # =========================
     for i, block in enumerate(inline_codes):
 
         text = text.replace(
@@ -177,9 +135,6 @@ def format_math_expressions(text: str) -> str:
             block
         )
 
-    # =========================
-    # Возвращаем code blocks
-    # =========================
     for i, block in enumerate(code_blocks):
 
         text = text.replace(
@@ -189,24 +144,13 @@ def format_math_expressions(text: str) -> str:
 
     return text
 
-
-# =========================
-# INLINE MATH
-# Только если внутри:
-# - есть \
-# - или ^
-# - или _
-# - или =
-# =========================
 def replace_inline(match):
 
     content = match.group(1).strip()
 
-    # если русский текст → НЕ трогаем
     if re.search(r"[а-яА-Я]", content):
         return f"({content})"
 
-    # признаки формулы
     if (
         "\\" in content
         or "^" in content
@@ -219,10 +163,6 @@ def replace_inline(match):
 
 def fix_latex(text: str):
 
-    # =========================
-    # DISPLAY MATH
-    # \[ ... \]
-    # =========================
     text = re.sub(
         r"\\\[\s*(.*?)\s*\\\]",
         r"\n$$\n\1\n$$\n",
@@ -230,10 +170,6 @@ def fix_latex(text: str):
         flags=re.DOTALL
     )
 
-    # =========================
-    # [ ... ] -> $$ ... $$
-    # только если внутри есть latex
-    # =========================
     text = re.sub(
         r"\[\s*(\\[a-zA-Z]+.*?|.*?=.*?)\s*\]",
         r"\n$$\n\1\n$$\n",
@@ -248,37 +184,23 @@ def fix_latex(text: str):
         text
     )
 
-    # =========================
-    # FIX BROKEN \left\frac
-    # =========================
+
     text = text.replace(
         r"\left\frac",
         r"\frac"
     )
 
-    # =========================
-    # MULTIPLE $$$
-    # =========================
     text = re.sub(
         r"\${3,}",
         "$$",
         text
     )
 
-    # =========================
-    # FIX CYRILLIC SUBSCRIPTS
-    # Q_{вход} -> Q_{\text{вход}}
-    # =========================
-
     text = re.sub(
         r"_\{([а-яА-Яa-zA-Z\s]+)\}",
         r"_{\\text{\1}}",
         text
     )
-
-    # =========================
-    # REMOVE SPACES INSIDE INLINE MATH
-    # =========================
 
     text = re.sub(
         r"\$\s*(.*?)\s*\$",
