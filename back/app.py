@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 from dotenv import load_dotenv
-from back.model_functions import load_peft_model, clean_markdown, get_cjk_bad_words_ids
+from back.model_functions import load_peft_model, clean_markdown
 import json
 from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
@@ -140,30 +140,13 @@ def generate_answer(messages):
         max_length=6096
     )
 
-    # input_device = next(model.parameters()).device
-    # inputs = {k: v.to(input_device) for k, v in inputs.items()}
-    # outputs = model.generate(
-    #     **inputs,
-    #     max_new_tokens=4096,
-    #     temperature=0.5,
-    #     do_sample=True
-    # )
     input_device = next(model.parameters()).device
     inputs = {k: v.to(input_device) for k, v in inputs.items()}
-
-    cjk_bad_words_ids = get_cjk_bad_words_ids()
-
-    generate_kwargs = {
-        "max_new_tokens": 4096,
-        "temperature": 0.6,
-        "do_sample": True,
-    }
-    if cjk_bad_words_ids:  # передаём фильтр только если список не пустой
-        generate_kwargs["bad_words_ids"] = cjk_bad_words_ids
-
     outputs = model.generate(
         **inputs,
-        **generate_kwargs
+        max_new_tokens=4096,
+        temperature=0.6,
+        do_sample=True
     )
 
     input_length = inputs["input_ids"].shape[1]
@@ -175,77 +158,11 @@ def generate_answer(messages):
     skip_special_tokens=True
     )
 
-
-    print("=== RAW MODEL OUTPUT ===")
-    print(repr(decoded))
-    print("=== END RAW ===")
-
     # обработка формул и спец символов
     decoded = fix_latex(decoded)
     decoded = normalize_markdown(decoded)
     decoded = format_math_expressions(decoded)
     return decoded
-
-
-def should_search(user_message: str) -> bool:
-    """
-    Спрашивает у модели, нужен ли веб-поиск для ответа на вопрос.
-    Использует короткий промпт и минимум токенов для скорости.
-    """
-    classifier_prompt = [
-        {
-            "role": "system",
-            "content": (
-                "Ты — классификатор запросов. Тебе дают вопрос пользователя. "
-                "Определи, нужна ли для ответа АКТУАЛЬНАЯ информация из интернета "
-                "(например: новости, последние события, текущие даты, "
-                "биографии конкретных людей, свежие технологии, цены, погода, "
-                "факты о реальных событиях после 2024 года). "
-                "Если вопрос про общие знания, код, математику, объяснение понятий, "
-                "которые не меняются со временем — поиск не нужен. "
-                "Ответь СТРОГО одним словом: ДА или НЕТ. Без пояснений."
-            )
-        },
-        {
-            "role": "user",
-            "content": user_message
-        }
-    ]
-
-    text = tokenizer.apply_chat_template(
-        classifier_prompt,
-        tokenize=False,
-        add_generation_prompt=True
-    )
-
-    inputs = tokenizer(
-        text,
-        return_tensors="pt",
-        truncation=True,
-        max_length=1024
-    )
-
-    input_device = next(model.parameters()).device
-    inputs = {k: v.to(input_device) for k, v in inputs.items()}
-
-    outputs = model.generate(
-        **inputs,
-        max_new_tokens=5,       # нужно буквально одно слово
-        temperature=0.1,        # минимум случайности — нужна стабильность да/нет
-        do_sample=False         # детерминированный ответ
-    )
-
-    input_length = inputs["input_ids"].shape[1]
-    generated_tokens = outputs[0][input_length:]
-
-    decision = tokenizer.decode(
-        generated_tokens,
-        skip_special_tokens=True
-    ).strip().lower()
-
-    print(f"[SEARCH CLASSIFIER] вопрос: {user_message[:50]}... -> ответ модели: '{decision}'")
-
-    return "да" in decision
 
 
 def pipeline(chat_history):
@@ -257,25 +174,26 @@ def pipeline(chat_history):
     for msg in chat_history:
         normalized_history.append({
             "role": str(msg["role"]),
-            "content": f'{str(msg["content"])}'
+            "content": f'{str(msg["content"])}. Ответь ТОЛЬКО на русском языке!'
         })
 
     last_user_msg = normalized_history[-1]["content"]
-
-    # модель сама решает, нужен ли поиск
-    use_search = should_search(last_user_msg)
+    # слова для "активации" поиска
+    use_search = any(word in last_user_msg.lower() for word in [
+        "кто", "новости", "последние", "объясни", "как работает", 'новые', 
+        'найди', 'недавно'
+    ])
 
     context = ""
     if use_search:
         print('USE SEARCH')
         context = search_web(last_user_msg)
-    else:
-        print('NOT USE SEARCH')
+    else: print('NOT USE SEARCH')
     messages = [
         {"role": "system", "content": f"{SYSTEM_PROMPT}. Учитывай актуальную информацию на текущий момент: {current_date}"}
     ]
     if context:
-        messages.append({ 
+        messages.append({
             "role": "system",
             "content": f"Дополнительный контекст:\n{context}"
         })
