@@ -16,6 +16,8 @@ from back.auth import hash_password, verify_password
 from fastapi.responses import StreamingResponse
 import asyncio
 from back.text_form import normalize_markdown, format_math_expressions, fix_latex
+from fastapi.middleware.cors import CORSMiddleware
+
 
 load_dotenv()
 
@@ -24,6 +26,15 @@ print("DATABASE CREATED")
 
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],   # или конкретный URL фронтенда
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 def get_db():
     db = SessionLocal()

@@ -58,7 +58,7 @@ export default function RegisterPage() {
         try {
 
             const response = await fetch(
-                "http://127.0.0.1:8000/register",
+                "https://tunelessly-snappy-goldeneye.cloudpub.ru/register",
                 {
                     method: "POST",
 

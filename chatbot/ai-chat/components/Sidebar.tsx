@@ -49,7 +49,7 @@ export default function Sidebar() {
             try {
 
                 const response = await fetch(
-                    `http://127.0.0.1:8000/chats/${user.user_id}`
+                    `https://tunelessly-snappy-goldeneye.cloudpub.ru/chats/${user.user_id}`
                 );
 
                 const data = await response.json();
@@ -80,7 +80,7 @@ export default function Sidebar() {
             if (!search.trim()) {
 
                 const response = await fetch(
-                    `http://127.0.0.1:8000/chats/${user.user_id}`
+                    `https://tunelessly-snappy-goldeneye.cloudpub.ru/chats/${user.user_id}`
                 );
 
                 const data = await response.json();
@@ -93,7 +93,7 @@ export default function Sidebar() {
             try {
 
                 const response = await fetch(
-                    `http://127.0.0.1:8000/search_chats/${user.user_id}?query=${search}`
+                    `https://tunelessly-snappy-goldeneye.cloudpub.ru/search_chats/${user.user_id}?query=${search}`
                 );
 
                 const data = await response.json();
@@ -123,7 +123,7 @@ export default function Sidebar() {
         try {
 
             const response = await fetch(
-                "http://127.0.0.1:8000/create_chat",
+                "https://tunelessly-snappy-goldeneye.cloudpub.ru/create_chat",
                 {
                     method: "POST",
 
@@ -164,7 +164,7 @@ export default function Sidebar() {
         try {
 
             await fetch(
-                `http://127.0.0.1:8000/chat/${chatId}`,
+                `https://tunelessly-snappy-goldeneye.cloudpub.ru/chat/${chatId}`,
                 {
                     method: "DELETE"
                 }

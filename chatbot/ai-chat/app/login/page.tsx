@@ -54,7 +54,7 @@ export default function LoginPage() {
         try {
 
             const response = await fetch(
-                "http://127.0.0.1:8000/login",
+                "https://tunelessly-snappy-goldeneye.cloudpub.ru/login",
                 {
                     method: "POST",
 

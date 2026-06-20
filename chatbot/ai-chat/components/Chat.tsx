@@ -52,7 +52,7 @@ export default function Chat() {
             try {
 
                 const response = await fetch(
-                    `http://127.0.0.1:8000/messages/${currentChatId}`
+                    `https://tunelessly-snappy-goldeneye.cloudpub.ru/messages/${currentChatId}`
                 );
 
                 const data = await response.json();
@@ -108,7 +108,7 @@ export default function Chat() {
         try {
 
             const response = await fetch(
-                "http://127.0.0.1:8000/chat_stream",
+                "https://tunelessly-snappy-goldeneye.cloudpub.ru/chat_stream",
                 {
                     method: "POST",
 
