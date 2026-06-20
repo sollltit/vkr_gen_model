@@ -1,5 +1,3 @@
-// src/components/Sidebar.tsx
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -42,9 +40,6 @@ export default function Sidebar() {
     );
 
 
-    // =========================
-    // LOAD CHATS
-    // =========================
     useEffect(() => {
 
         async function loadChats() {
@@ -76,9 +71,6 @@ export default function Sidebar() {
     }, [user]);
 
 
-    // =========================
-    // SEARCH
-    // =========================
     useEffect(() => {
 
         async function searchChats() {
@@ -124,9 +116,6 @@ export default function Sidebar() {
     }, [search]);
 
 
-    // =========================
-    // CREATE CHAT
-    // =========================
     async function handleCreateChat() {
 
         if (!user) return;
@@ -168,9 +157,6 @@ export default function Sidebar() {
     }
 
 
-    // =========================
-    // DELETE CHAT
-    // =========================
     async function handleDeleteChat(
         chatId: number
     ) {

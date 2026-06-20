@@ -1,9 +1,6 @@
 import { create } from "zustand";
 
 
-// =========================
-// TYPES
-// =========================
 export interface Message {
 
     role: "user" | "assistant";
@@ -32,18 +29,12 @@ interface MessageStore {
 }
 
 
-// =========================
-// STORE
-// =========================
 export const useMessageStore =
     create<MessageStore>((set) => ({
 
         messages: [],
 
 
-        // =========================
-        // SET MESSAGES
-        // =========================
         setMessages: (messages) =>
 
             set({
@@ -51,9 +42,6 @@ export const useMessageStore =
             }),
 
 
-        // =========================
-        // ADD MESSAGE
-        // =========================
         addMessage: (message) =>
 
             set((state) => ({
@@ -65,19 +53,12 @@ export const useMessageStore =
             })),
 
 
-        // =========================
-        // CLEAR
-        // =========================
         clearMessages: () =>
 
             set({
                 messages: []
             }),
 
-
-        // =========================
-        // STREAM UPDATE
-        // =========================
         updateLastMessage: (content) =>
 
             set((state) => {

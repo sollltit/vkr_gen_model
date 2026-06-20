@@ -2,11 +2,8 @@ from sqlalchemy import Column, Integer, String, ForeignKey, Text, DateTime
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from back.database import Base
-import re
 
-# =========================
-# USERS
-# =========================
+
 class User(Base):
 
     __tablename__ = "users"
@@ -38,9 +35,6 @@ class User(Base):
     )
 
 
-# =========================
-# CHATS
-# =========================
 class Chat(Base):
 
     __tablename__ = "chats"
@@ -58,13 +52,11 @@ class Chat(Base):
         default=datetime.utcnow
     )
 
-    # 🔹 Владелец чата
     user_id = Column(
         Integer,
         ForeignKey("users.id")
     )
 
-    # ДОБАВИТЬ ЭТО
     user = relationship(
         "User",
         back_populates="chats"
@@ -75,9 +67,7 @@ class Chat(Base):
         back_populates="chat"
     )
 
-# =========================
-# MESSAGES
-# =========================
+
 class Message(Base):
 
     __tablename__ = "messages"

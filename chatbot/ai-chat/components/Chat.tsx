@@ -38,9 +38,6 @@ export default function Chat() {
     } = useMessageStore();
 
 
-    // =========================
-    // LOAD MESSAGES
-    // =========================
     useEffect(() => {
 
         async function loadMessages() {
@@ -76,10 +73,6 @@ export default function Chat() {
 
     }, [currentChatId]);
 
-
-    // =========================
-    // AUTO SCROLL
-    // =========================
     useEffect(() => {
 
         messagesEndRef.current?.scrollIntoView({
@@ -88,10 +81,6 @@ export default function Chat() {
 
     }, [messages, isLoading]);
 
-
-    // =========================
-    // SEND MESSAGE
-    // =========================
     async function handleSend() {
 
         if (!input.trim()) return;
@@ -161,9 +150,7 @@ export default function Chat() {
                 updateLastMessage(fullText);
             }
 
-            // =========================
-            // UPDATE CHAT TITLE
-            // =========================
+
             const updatedChats = chats.map((chat) => {
 
                 if (
@@ -195,9 +182,6 @@ export default function Chat() {
     }
 
 
-    // =========================
-    // EMPTY STATE
-    // =========================
     if (!currentChatId) {
 
         return (

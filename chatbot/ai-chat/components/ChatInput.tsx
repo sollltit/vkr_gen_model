@@ -24,9 +24,6 @@ export default function ChatInput({
     const [text, setText] = useState("");
 
 
-    // =========================
-    // SEND MESSAGE
-    // =========================
     function handleSend() {
 
         if (!text.trim()) return;
@@ -37,9 +34,6 @@ export default function ChatInput({
     }
 
 
-    // =========================
-    // ENTER
-    // =========================
     function handleKeyDown(
         e: KeyboardEvent<HTMLTextAreaElement>
     ) {

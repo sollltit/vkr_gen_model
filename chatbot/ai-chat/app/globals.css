@@ -39,9 +39,6 @@ body {
     box-sizing: border-box;
 }
 
-/* =========================
-   SCROLLBAR
-========================= */
 
 ::-webkit-scrollbar {
     width: 8px;
@@ -56,9 +53,6 @@ body {
     border-radius: 999px;
 }
 
-/* =========================
-   MARKDOWN
-========================= */
 
 .markdown-body {
     line-height: 1.8;
