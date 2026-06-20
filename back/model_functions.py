@@ -17,6 +17,53 @@ tavily_api_key = os.getenv("TAVILY_API_KEY")
 sys_prompt = os.getenv("SYSTEM_PROMPT")
 
 
+# диапазоны Unicode для китайских/японских/корейских иероглифов (CJK)
+CJK_RANGES = [
+    (0x4E00, 0x9FFF),    # CJK Unified Ideographs (основной блок, китайские иероглифы)
+    (0x3400, 0x4DBF),    # CJK Unified Ideographs Extension A
+    (0x20000, 0x2A6DF),  # CJK Unified Ideographs Extension B
+    (0xF900, 0xFAFF),    # CJK Compatibility Ideographs
+    (0x3000, 0x303F),    # CJK Symbols and Punctuation
+    (0xFF00, 0xFFEF),    # Halfwidth/Fullwidth Forms
+]
+
+
+def _contains_cjk(text: str) -> bool:
+    """Проверяет, содержит ли строка символы из CJK-диапазонов"""
+    for ch in text:
+        code = ord(ch)
+        for start, end in CJK_RANGES:
+            if start <= code <= end:
+                return True
+    return False
+
+
+@lru_cache(maxsize=1)
+def get_cjk_bad_words_ids():
+    """
+    Сканирует весь словарь токенизатора и возвращает список id токенов,
+    которые при декодировании содержат китайские/CJK символы.
+    """
+    _, tokenizer = load_peft_model()
+
+    vocab = tokenizer.get_vocab()
+    bad_ids = []
+
+    for token_str, token_id in vocab.items():
+        # декодируем токен в реальный текст (BPE-ключи могут быть закодированы байтами)
+        try:
+            decoded = tokenizer.decode([token_id])
+        except Exception:
+            continue
+
+        if _contains_cjk(decoded):
+            bad_ids.append([token_id])
+
+    print(f"[CJK FILTER] найдено {len(bad_ids)} токенов с CJK-символами из {len(vocab)} токенов словаря")
+
+    return bad_ids
+
+
 # загрузкат модели
 @lru_cache(maxsize=1)
 def load_peft_model(model_path=model_path, lora_path=lora_path):

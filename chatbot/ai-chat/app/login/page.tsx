@@ -12,6 +12,11 @@ import {
 import { useAuthStore } from "@/store/authStore";
 
 
+function isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
+
 export default function LoginPage() {
 
     const router = useRouter();
@@ -35,6 +40,16 @@ export default function LoginPage() {
     async function handleLogin() {
 
         setError("");
+
+        if (!email.trim()) {
+            setError("Введите email");
+            return;
+        }
+
+        if (!isValidEmail(email)) {
+            setError("Введите корректный email");
+            return;
+        }
 
         try {
 

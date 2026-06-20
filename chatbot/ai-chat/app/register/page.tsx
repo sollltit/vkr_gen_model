@@ -9,7 +9,16 @@ import {
     EyeOff
 } from "lucide-react";
 
+function isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
 
+// export default function RegisterPage() {
+
+//     const router = useRouter();
+
+    
 export default function RegisterPage() {
 
     const router = useRouter();
@@ -35,6 +44,16 @@ export default function RegisterPage() {
         setError("");
 
         setSuccess("");
+
+        if (!email.trim()) {
+            setError("Введите email");
+            return;
+        }
+
+        if (!isValidEmail(email)) {
+            setError("Введите корректный email (например, name@mail.com)");
+            return;
+        }
 
         try {
 
