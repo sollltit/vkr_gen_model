@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import re
 
-API_URL = "http://localhost:8000/chat"
+API_URL = "https://portentously-glamorous-leafroller.cloudpub.ru/chat"
 
 st.set_page_config(page_title="валидация модели", layout="centered")
 
